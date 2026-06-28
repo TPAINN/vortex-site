@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Vortex -- paste a link, keep the video</title>
+<meta name="description" content="Vortex is a free Android app that saves video and audio from YouTube, TikTok, Instagram, X, Reddit, SoundCloud, Spotify and Threads straight to your Downloads folder." />
+<meta name="theme-color" content="#000000" />
+<meta property="og:title" content="Vortex -- paste a link, keep the video" />
+<meta property="og:description" content="Free Android downloader for 10+ platforms. MP4 up to 1080p, MP3 at 320 kbps. No ads, no accounts, no watermarks." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://vortex-site-pi.vercel.app" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237C3AED'/%3E%3Cstop offset='1' stop-color='%233B82F6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='42' fill='none' stroke='url(%23g)' stroke-width='10'/%3E%3Ccircle cx='50' cy='50' r='20' fill='none' stroke='url(%23g)' stroke-width='10' stroke-dasharray='85 45'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    --black: oklch(0 0 0);
+    --surface-1: oklch(0.17 0.012 290);
+    --surface-2: oklch(0.22 0.015 290);
+    --glass: oklch(1 0 0 / 0.07);
+    --glass-border: oklch(1 0 0 / 0.14);
+    --ink: oklch(0.985 0 0);
+    --ink-2: oklch(0.78 0.01 290);
+    --ink-3: oklch(0.58 0.012 290);
+    --violet: oklch(0.55 0.25 293);
+    --violet-bright: oklch(0.68 0.22 300);
+    --blue: oklch(0.65 0.17 256);
+    --green: oklch(0.75 0.18 152);
+    --display: "Bricolage Grotesque", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --z-nav: 10;
+    --z-hero-fg: 2;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; overflow-x: clip; }
+  body {
+    margin: 0;
+    background: var(--black);
+    color: var(--ink-2);
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+  ::selection { background: var(--violet); color: var(--ink); }
+  h1, h2, h3 { color: var(--ink); margin: 0; text-wrap: balance; }
+  p { margin: 0; max-width: 62ch; }
+  a { color: inherit; }
+  .wrap { width: min(1120px, 100% - clamp(40px, 8vw, 96px)); margin-inline: auto; }
+
+  /* NAV */
+  nav {
+    position: fixed; inset: 0 0 auto; z-index: var(--z-nav);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px clamp(20px, 4.5vw, 48px);
+    background: linear-gradient(oklch(0 0 0 / 0.75), transparent);
+  }
+  .nav__logo {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 19px; letter-spacing: -0.02em;
+    color: var(--ink); text-decoration: none;
+  }
+  .nav__logo svg { display: block; }
+  .nav__cta {
+    font-family: var(--mono); font-size: 13px; text-decoration: none;
+    color: var(--ink); border: 1px solid var(--glass-border);
+    background: var(--glass); padding: 9px 18px; border-radius: 99px;
+    transition: border-color 0.25s, background 0.25s;
+  }
+  .nav__cta:hover { border-color: var(--violet-bright); background: oklch(0.55 0.25 293 / 0.18); }
+
+  /* HERO */
+  .hero {
+    position: relative; min-height: 100svh;
+    display: grid; align-content: center; justify-items: center;
+    text-align: center; padding: clamp(96px, 14vh, 160px) 0 64px;
+    isolation: isolate;
+  }
+  .vortex {
+    position: absolute; inset: -25%; z-index: 0; pointer-events: none; opacity: 0.85;
+    -webkit-mask-image: radial-gradient(ellipse 62% 52% at 50% 44%, #000 0%, transparent 72%);
+    mask-image: radial-gradient(ellipse 62% 52% at 50% 44%, #000 0%, transparent 72%);
+  }
+  .vortex::before, .vortex::after {
+    content: ''; position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(
+      from 0deg, transparent 0deg, oklch(0.55 0.25 293 / 0.55) 80deg,
+      transparent 160deg, oklch(0.65 0.17 256 / 0.45) 250deg, transparent 330deg
+    );
+    filter: blur(58px); animation: spin 38s linear infinite;
+  }
+  .vortex::after {
+    background: conic-gradient(
+      from 180deg, transparent 0deg, oklch(0.65 0.17 256 / 0.4) 110deg,
+      transparent 200deg, oklch(0.68 0.22 300 / 0.45) 290deg, transparent 360deg
+    );
+    animation: spin 56s linear infinite reverse;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hero__inner { position: relative; z-index: var(--z-hero-fg); display: grid; justify-items: center; gap: 28px; }
+  .hero h1 {
+    font-size: clamp(3rem, 9.5vw, 5.9rem); font-weight: 800;
+    line-height: 1.02; letter-spacing: -0.035em;
+    font-variation-settings: "opsz" 96; max-width: 11ch;
+  }
+  .hero h1 em { font-style: normal; color: var(--violet-bright); }
+  .hero__sub { font-size: clamp(1rem, 1.6vw, 1.15rem); color: var(--ink-2); max-width: 52ch; }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: center; }
+  .btn-apk {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 18px 34px; border-radius: 18px;
+    background: linear-gradient(135deg, var(--violet), var(--blue));
+    color: var(--ink); text-decoration: none; font-weight: 700;
+    font-size: 18px; letter-spacing: -0.01em;
+    box-shadow: 0 0 0 1px oklch(1 0 0 / 0.12) inset, 0 12px 48px oklch(0.55 0.25 293 / 0.45);
+    transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s;
+  }
+  .btn-apk:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px oklch(1 0 0 / 0.18) inset, 0 18px 64px oklch(0.55 0.25 293 / 0.6); }
+  .btn-apk:active { transform: translateY(0) scale(0.98); }
+  .btn-apk .meta { font-family: var(--mono); font-weight: 400; font-size: 12px; color: oklch(1 0 0 / 0.75); }
+  .hero__alt { font-family: var(--mono); font-size: 12.5px; color: var(--ink-3); }
+  .hero__alt a { color: var(--ink-2); }
+
+  /* MARQUEE */
+  .marquee {
+    margin-top: clamp(40px, 7vh, 72px); width: 100%; overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  .marquee__track {
+    display: flex; gap: 44px; width: max-content;
+    animation: slide 30s linear infinite;
+    font-family: var(--mono); font-size: 14px; color: var(--ink-3);
+    white-space: nowrap; padding-block: 6px;
+  }
+  .marquee__track span { display: flex; align-items: center; gap: 44px; }
+  .marquee__track b { color: var(--ink-2); font-weight: 500; }
+  @keyframes slide { to { transform: translateX(-50%); } }
+
+  /* SECTIONS -- FIXED: reduced padding to eliminate empty gaps */
+  section { padding-block: clamp(56px, 8vh, 96px); }
+
+  .section-title {
+    font-size: clamp(2rem, 4.5vw, 3.1rem); font-weight: 750;
+    letter-spacing: -0.03em; line-height: 1.08;
+    margin-bottom: clamp(28px, 4vh, 48px); max-width: 18ch;
+  }
+  .section-title em { font-style: normal; color: var(--violet-bright); }
+
+  /* STEPS */
+  .steps {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: clamp(16px, 2.5vw, 28px); counter-reset: step;
+  }
+  .step {
+    position: relative; padding: 26px 26px 28px;
+    border: 1px solid var(--glass-border); border-radius: 22px;
+    background: linear-gradient(160deg, var(--glass), transparent 65%);
+  }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    display: inline-grid; place-items: center; width: 40px; height: 40px;
+    border-radius: 12px; margin-bottom: 18px; font-weight: 800; font-size: 18px;
+    color: var(--ink); background: linear-gradient(135deg, var(--violet), var(--blue));
+  }
+  .step h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 8px; }
+  .step p { font-size: 15.5px; color: var(--ink-2); }
+  .step code {
+    font-family: var(--mono); font-size: 12.5px;
+    background: var(--glass); border: 1px solid var(--glass-border);
+    border-radius: 6px; padding: 2px 7px; color: var(--ink-2);
+  }
+
+  /* SHOWCASE */
+  .showcase {
+    display: grid; grid-template-columns: minmax(280px, 380px) 1fr;
+    gap: clamp(32px, 5vw, 72px); align-items: center;
+  }
+  @media (max-width: 800px) { .showcase { grid-template-columns: 1fr; justify-items: center; } }
+
+  .phone {
+    width: min(300px, 86vw); aspect-ratio: 9 / 19; border-radius: 44px;
+    border: 1px solid oklch(1 0 0 / 0.22); background: #000;
+    box-shadow: 0 0 0 9px oklch(0.13 0.01 290), 0 0 0 10px oklch(1 0 0 / 0.08),
+      0 36px 90px oklch(0.55 0.25 293 / 0.28);
+    padding: 22px 16px; display: flex; flex-direction: column; gap: 13px;
+    overflow: hidden; position: relative;
+  }
+  .phone::before {
+    content: ''; position: absolute; top: 12px; left: 50%; translate: -50% 0;
+    width: 84px; height: 7px; border-radius: 99px; background: oklch(0.2 0 0);
+  }
+  .phone__title { margin-top: 26px; font-weight: 800; font-size: 21px; color: var(--ink); letter-spacing: -0.02em; }
+  .phone__title b { color: var(--violet-bright); }
+  .pcard { border: 1px solid var(--glass-border); background: var(--glass); border-radius: 17px; padding: 13px 15px; font-size: 12.5px; color: var(--ink-3); }
+  .pcard--url { display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 11.5px; overflow: hidden; white-space: nowrap; }
+  .pcard--url i { flex-shrink: 0; width: 8px; height: 8px; border-radius: 99px; background: var(--green); }
+  .pcard__name { color: var(--ink); font-size: 13.5px; font-weight: 600; margin-bottom: 2px; }
+  .pchips { display: flex; gap: 7px; flex-wrap: wrap; }
+  .pchip { font-family: var(--mono); font-size: 10.5px; padding: 6px 11px; border-radius: 99px; border: 1px solid var(--glass-border); color: var(--ink-3); }
+  .pchip--on { border-color: transparent; background: linear-gradient(135deg, var(--violet), var(--blue)); color: var(--ink); }
+  .pbar { height: 7px; border-radius: 99px; background: oklch(1 0 0 / 0.09); overflow: hidden; margin-top: 9px; }
+  .pbar i { display: block; height: 100%; width: 67%; border-radius: 99px; background: linear-gradient(90deg, var(--violet), var(--blue)); animation: fill 2.6s cubic-bezier(0.22,1,0.36,1) infinite alternate; }
+  @keyframes fill { from { width: 34%; } to { width: 88%; } }
+  .pstat { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10.5px; margin-top: 8px; }
+  .pstat b { color: var(--green); font-weight: 500; }
+
+  .specs { display: grid; gap: 0; }
+  .spec {
+    display: grid; grid-template-columns: minmax(120px, 168px) 1fr;
+    gap: 18px; padding: 17px 4px; border-top: 1px solid oklch(1 0 0 / 0.1);
+    align-items: baseline;
+  }
+  .spec:last-child { border-bottom: 1px solid oklch(1 0 0 / 0.1); }
+  .spec dt { font-family: var(--mono); font-size: 12px; color: var(--violet-bright); margin: 0; }
+  .spec dd { margin: 0; font-size: 15px; color: var(--ink-2); }
+  .spec dd b { color: var(--ink); font-weight: 600; }
+  @media (max-width: 520px) { .spec { grid-template-columns: 1fr; gap: 4px; } }
+
+  /* DOWNLOAD */
+  .download { position: relative; text-align: center; isolation: isolate; }
+  .download .vortex { opacity: 0.55; inset: -55% -25%; }
+  .download__inner { position: relative; z-index: 1; display: grid; justify-items: center; gap: 20px; }
+  .download .section-title { margin-bottom: 4px; }
+  .download__note { font-size: 15px; color: var(--ink-2); max-width: 48ch; }
+  .download__reqs {
+    display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: center;
+    font-family: var(--mono); font-size: 12px; color: var(--ink-3);
+  }
+  .sideload { margin-top: 10px; font-size: 13.5px; color: var(--ink-3); max-width: 54ch; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid oklch(1 0 0 / 0.1); padding: 32px 0 44px;
+    display: flex; flex-wrap: wrap; gap: 14px 36px;
+    justify-content: space-between; font-size: 13px; color: var(--ink-3);
+  }
+  footer p { max-width: 58ch; }
+
+  /* REVEAL -- always show, animate if supported */
+  .reveal { transition: transform 0.8s cubic-bezier(0.22,1,0.36,1), opacity 0.8s ease; }
+  .reveal.pre { transform: translateY(22px); opacity: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .vortex::before, .vortex::after, .marquee__track, .pbar i { animation: none; }
+    .reveal, .reveal.pre { transition: none; transform: none; opacity: 1; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav__logo" href="#top" aria-label="Vortex home">
+    <svg width="26" height="26" viewBox="0 0 100 100" aria-hidden="true">
+      <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#3B82F6"/>
+      </linearGradient></defs>
+      <circle cx="50" cy="50" r="42" fill="none" stroke="url(#lg)" stroke-width="10"/>
+      <circle cx="50" cy="50" r="20" fill="none" stroke="url(#lg)" stroke-width="10" stroke-dasharray="85 45"/>
+    </svg>
+    Vortex
+  </a>
+  <a class="nav__cta" href="#download">Get the APK</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="vortex" aria-hidden="true"></div>
+  <div class="wrap hero__inner">
+    <h1>Paste a link. <em>Keep the video.</em></h1>
+    <p class="hero__sub">
+      Vortex is a free Android app that pulls video and audio from YouTube, TikTok,
+      Instagram, X, Reddit, SoundCloud, Spotify and Threads straight into your
+      Downloads folder. No ads, no accounts, no watermarks.
+    </p>
+    <div class="hero__actions">
+      <a class="btn-apk" href="/dl/vortex-1.2.2-arm64.apk" download>
+        Download APK
+        <span class="meta">v1.2.2 &middot; 33 MB</span>
+      </a>
+    </div>
+    <p class="hero__alt">
+      64-bit build, fits most phones since 2017 &middot;
+      <a href="/dl/vortex-1.2.2-arm32.apk" download>older 32-bit phones</a>
+    </p>
+  </div>
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee__track">
+      <span>
+        <b>YouTube</b> &middot; <b>TikTok</b> &middot; <b>Instagram</b> &middot; <b>X / Twitter</b> &middot;
+        <b>Reddit</b> &middot; <b>SoundCloud</b> &middot; <b>Spotify</b> &middot; <b>Threads</b> &middot;
+        <b>Facebook</b> &middot; <b>Twitch</b> &middot; <b>Vimeo</b> &middot;
+      </span>
+      <span>
+        <b>YouTube</b> &middot; <b>TikTok</b> &middot; <b>Instagram</b> &middot; <b>X / Twitter</b> &middot;
+        <b>Reddit</b> &middot; <b>SoundCloud</b> &middot; <b>Spotify</b> &middot; <b>Threads</b> &middot;
+        <b>Facebook</b> &middot; <b>Twitch</b> &middot; <b>Vimeo</b> &middot;
+      </span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="wrap" id="how">
+    <h2 class="section-title">Three taps, <em>start to saved</em></h2>
+    <ol class="steps" style="list-style:none;margin:0;padding:0;">
+      <li class="step reveal">
+        <h3>Paste or share the link</h3>
+        <p>Copy any video URL, or hit <code>Share &rarr; Vortex</code> from the platform&#39;s own app. Vortex reads the title, thumbnail and length before you commit.</p>
+      </li>
+      <li class="step reveal">
+        <h3>Pick your format</h3>
+        <p>Video as <code>MP4</code> up to 1080p, or audio only as <code>MP3 320 kbps</code> / <code>M4A</code> with cover art and track metadata baked in.</p>
+      </li>
+      <li class="step reveal">
+        <h3>It lands in Downloads</h3>
+        <p>A notification tracks speed and ETA while you do something else. The file appears in <code>Downloads/Vortex</code>, ready for any player or gallery.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="wrap" id="app">
+    <h2 class="section-title">The same screen, <em>nothing in the way</em></h2>
+    <div class="showcase">
+      <div class="phone reveal" role="img" aria-label="The Vortex app UI showing a download in progress">
+        <div class="phone__title">Vor<b>tex</b></div>
+        <div class="pcard pcard--url"><i></i>youtube.com/watch?v=dQw4w9&hellip;</div>
+        <div class="pcard">
+          <div class="pcard__name">Never Gonna Give You Up</div>
+          Rick Astley &middot; 3:32
+        </div>
+        <div class="pchips">
+          <span class="pchip">Best</span>
+          <span class="pchip">1080p</span>
+          <span class="pchip">720p</span>
+          <span class="pchip pchip--on">MP3</span>
+          <span class="pchip">M4A</span>
+        </div>
+        <div class="pcard">
+          Downloading&hellip;
+          <div class="pbar"><i></i></div>
+          <div class="pstat"><b>8.4 MB/s</b><span>ETA 4s</span></div>
+        </div>
+      </div>
+      <dl class="specs">
+        <div class="spec reveal"><dt>platforms</dt><dd><b>10+ sites</b> handled natively, hundreds more through the yt-dlp engine underneath.</dd></div>
+        <div class="spec reveal"><dt>audio</dt><dd><b>MP3 at 320 kbps</b> with embedded cover art, artist and title tags. Spotify links resolve to full tracks automatically.</dd></div>
+        <div class="spec reveal"><dt>video</dt><dd>Best-available quality with audio merged in, or capped at <b>1080p / 720p</b> when you want smaller files.</dd></div>
+        <div class="spec reveal"><dt>background</dt><dd>Downloads keep running when you leave: a live notification shows <b>progress, speed and ETA</b>, with one-tap cancel.</dd></div>
+        <div class="spec reveal"><dt>private posts</dt><dd>Sign in once through the built-in browser and Vortex reuses the session for <b>age-gated and follower-only</b> content.</dd></div>
+        <div class="spec reveal"><dt>history</dt><dd>Everything you&rsquo;ve saved, with thumbnails, one tap from replaying or deleting.</dd></div>
+        <div class="spec reveal"><dt>cost</dt><dd><b>Free.</b> No ads, no trackers, no account, no watermark on anything.</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="download" id="download">
+    <div class="vortex" aria-hidden="true"></div>
+    <div class="wrap download__inner">
+      <h2 class="section-title" style="max-width:14ch;margin-inline:auto;">Put it on <em>your phone</em></h2>
+      <p class="download__note">Vortex installs directly from the APK, no store account needed.</p>
+      <a class="btn-apk" href="/dl/vortex-1.2.2-arm64.apk" download>
+        Download APK
+        <span class="meta">v1.2.2 &middot; 33 MB</span>
+      </a>
+      <div class="download__reqs">
+        <span>Android 8.0+</span>
+        <span>arm64 &middot; <a href="/dl/vortex-1.2.2-arm32.apk" download style="color:inherit">arm32 build</a></span>
+        <span>33 MB installed core</span>
+      </div>
+      <p class="sideload">
+        First install: Android will ask you to allow installs from your browser.
+        Approve it once under <strong style="color:var(--ink-2)">Settings &rarr; Install unknown apps</strong>,
+        then open the APK again.
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p>
+    Vortex is for saving content you have the right to keep: your own uploads,
+    Creative Commons media, and personal offline use. Respect each platform&#39;s
+    terms and creators&#39; rights.
+  </p>
+  <span>Built in Greece &middot; v1.2.2 &middot; 2026</span>
+</footer>
+
+<script>
+  const els = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window &&
+      !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) { e.target.classList.remove('pre'); io.unobserve(e.target); }
+      }
+    }, { threshold: 0.1, rootMargin: '0px 0px -20px' });
+    for (const el of els) {
+      const r = el.getBoundingClientRect();
+      if (r.top > innerHeight * 0.9) { el.classList.add('pre'); io.observe(el); }
+    }
+  }
+</script>
+
+<script>
+  (async () => {
+    const FB = { versionName: "1.2.2", apkUrl: "/dl/vortex-1.2.2-arm64.apk", apkUrlArm32: "/dl/vortex-1.2.2-arm32.apk" };
+    let m = FB;
+    try { const r = await fetch("/version.json", { cache: "no-cache" }); if (r.ok) m = Object.assign({}, FB, await r.json()); } catch (e) {}
+    let arm32 = false;
+    try {
+      if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+        const h = await navigator.userAgentData.getHighEntropyValues(["architecture", "bitness"]);
+        if ((h.architecture || "").toLowerCase().includes("arm") && h.bitness !== "64") arm32 = true;
+      }
+    } catch (e) {}
+    const primary = arm32 ? m.apkUrlArm32 : m.apkUrl;
+    document.querySelectorAll("a.btn-apk").forEach((a) => {
+      a.href = primary;
+      const meta = a.querySelector(".meta");
+      if (meta) meta.textContent = "v" + m.versionName + " · 33 MB";
+    });
+    document.querySelectorAll("a[href*=\"arm32\"]").forEach((a) => { a.href = m.apkUrlArm32; });
+  })();
+</script>
+</body>
+</html>
