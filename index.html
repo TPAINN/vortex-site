@@ -278,14 +278,13 @@
       Downloads folder. No ads, no accounts, no watermarks.
     </p>
     <div class="hero__actions">
-      <a class="btn-apk" href="/dl/vortex-1.2.2-arm64.apk" download>
+      <a class="btn-apk btn-apk--soon" href="#download" aria-disabled="true" onclick="return false" style="opacity:.65;cursor:default">
         Download APK
-        <span class="meta">v1.2.2 &middot; 33 MB</span>
+        <span class="meta">new build coming soon</span>
       </a>
     </div>
     <p class="hero__alt">
-      64-bit build, fits most phones since 2017 &middot;
-      <a href="/dl/vortex-1.2.2-arm32.apk" download>older 32-bit phones</a>
+      The download is being rebuilt &mdash; check back shortly.
     </p>
   </div>
   <div class="marquee" aria-hidden="true">
@@ -363,19 +362,18 @@
     <div class="wrap download__inner">
       <h2 class="section-title" style="max-width:14ch;margin-inline:auto;">Put it on <em>your phone</em></h2>
       <p class="download__note">Vortex installs directly from the APK, no store account needed.</p>
-      <a class="btn-apk" href="/dl/vortex-1.2.2-arm64.apk" download>
+      <a class="btn-apk btn-apk--soon" href="#download" aria-disabled="true" onclick="return false" style="opacity:.65;cursor:default">
         Download APK
-        <span class="meta">v1.2.2 &middot; 33 MB</span>
+        <span class="meta">new build coming soon</span>
       </a>
       <div class="download__reqs">
         <span>Android 8.0+</span>
-        <span>arm64 &middot; <a href="/dl/vortex-1.2.2-arm32.apk" download style="color:inherit">arm32 build</a></span>
-        <span>33 MB installed core</span>
+        <span>arm64 &amp; arm32</span>
+        <span>direct APK install</span>
       </div>
       <p class="sideload">
-        First install: Android will ask you to allow installs from your browser.
-        Approve it once under <strong style="color:var(--ink-2)">Settings &rarr; Install unknown apps</strong>,
-        then open the APK again.
+        A fresh build is on the way &mdash; the previous package is being rebuilt
+        and re-signed. Check back soon.
       </p>
     </div>
   </section>
@@ -408,9 +406,12 @@
 
 <script>
   (async () => {
-    const FB = { versionName: "1.2.2", apkUrl: "/dl/vortex-1.2.2-arm64.apk", apkUrlArm32: "/dl/vortex-1.2.2-arm32.apk" };
+    // No fallback APK claim — links only go live when /version.json supplies a
+    // real, existing package (upload APKs + version.json, then buttons activate).
+    const FB = { versionName: null, apkUrl: null, apkUrlArm32: null };
     let m = FB;
     try { const r = await fetch("/version.json", { cache: "no-cache" }); if (r.ok) m = Object.assign({}, FB, await r.json()); } catch (e) {}
+    if (!m.apkUrl) return; // stay in honest "coming soon" state
     let arm32 = false;
     try {
       if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
