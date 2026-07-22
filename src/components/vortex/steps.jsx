@@ -34,7 +34,7 @@ function Steps() {
 
         <ol className="mt-12 grid list-none gap-5 sm:grid-cols-3" style={{ margin: 0, padding: 0 }}>
           {STEPS.map((s, i) => <Reveal key={s.title} delay={i * 0.12}>
-              <li className="group relative h-full overflow-hidden rounded-3xl border border-glass bg-glass p-6 backdrop-blur-md transition-all duration-300 hover:border-violet/40 hover:bg-white/[0.07] sm:p-7">
+              <li className="group relative h-full overflow-hidden rounded-3xl border border-glass bg-glass p-6 transition-all duration-300 hover:border-violet/40 hover:bg-white/[0.07] sm:p-7">
                 <div
     className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
     style={{ background: "radial-gradient(circle, oklch(0.55 0.25 293 / 0.5), transparent 70%)" }}

@@ -5,8 +5,8 @@ const SECTIONS = [
   { id: "top", label: "Home" },
   { id: "how", label: "How" },
   { id: "app", label: "App" },
-  { id: "platforms", label: "Platforms" },
   { id: "proof", label: "Proof" },
+  { id: "platforms", label: "Platforms" },
   { id: "faq", label: "FAQ" },
   { id: "download", label: "Get" }
 ];
@@ -17,30 +17,25 @@ function SectionDots({ active }) {
   useEffect(() => {
     if (!active) return;
 
-    // Cache each section's offset ONCE (and on resize). The old code read
-    // offsetTop/offsetHeight for every section on every scroll tick, forcing a
-    // synchronous layout each time — a real source of scroll jank up top.
+    // Sections in document order. The active one is the LAST section whose top
+    // has crossed the probe line (40% down the viewport). Because we walk them
+    // in order and stop at the first one still below the line, the highlight can
+    // only ever move to an ADJACENT section as you scroll — it never jumps out
+    // of order, and it never skips one. Reading live getBoundingClientRect (once
+    // per frame, throttled by rAF) means no stale offsets when fonts/layout
+    // settle, and no per-scroll forced reflow.
     const items = SECTIONS
       .map((s) => ({ id: s.id, el: document.getElementById(s.id) }))
       .filter((x) => x.el);
-    let offsets = [];
-    const measure = () => {
-      offsets = items.map(({ id, el }) => ({ id, center: el.offsetTop + el.offsetHeight / 2 }));
-    };
-    measure();
 
     let ticking = false;
     const update = () => {
       ticking = false;
-      const probe = window.scrollY + window.innerHeight * 0.42;
-      let best = offsets[0]?.id ?? "top";
-      let bestDist = Infinity;
-      for (const o of offsets) {
-        const d = Math.abs(probe - o.center);
-        if (d < bestDist) {
-          bestDist = d;
-          best = o.id;
-        }
+      const probe = window.innerHeight * 0.4;
+      let best = items[0]?.id ?? "top";
+      for (const { id, el } of items) {
+        if (el.getBoundingClientRect().top <= probe) best = id;
+        else break;
       }
       setCurrent(best);
     };
@@ -50,18 +45,10 @@ function SectionDots({ active }) {
         requestAnimationFrame(update);
       }
     };
-    const onResize = () => {
-      measure();
-      update();
-    };
 
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onResize);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onResize);
-    };
+    return () => window.removeEventListener("scroll", onScroll);
   }, [active]);
 
   if (!active) return null;

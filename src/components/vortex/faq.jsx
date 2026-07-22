@@ -60,7 +60,7 @@ function Faq() {
             {FAQS.map((f, i) => <AccordionItem
     key={i}
     value={`item-${i}`}
-    className="overflow-hidden rounded-2xl border border-glass bg-glass px-5 backdrop-blur-md data-[state=open]:border-violet/40"
+    className="overflow-hidden rounded-2xl border border-glass bg-glass px-5 data-[state=open]:border-violet/40"
   >
                 <AccordionTrigger className="py-5 text-left font-display text-[16px] font-semibold text-ink hover:no-underline">
                   {f.q}

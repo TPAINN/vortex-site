@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 const LINKS = [
   { href: "#how", label: "How" },
   { href: "#app", label: "App" },
-  { href: "#platforms", label: "Platforms" },
   { href: "#proof", label: "Proof" },
+  { href: "#platforms", label: "Platforms" },
   { href: "#faq", label: "FAQ" }
 ];
 function Nav({ active }) {
@@ -25,7 +25,7 @@ function Nav({ active }) {
     transition={{ delay: 0.1, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
     className={cn(
       "fixed inset-x-0 top-0 z-50 transition-all duration-300",
-      scrolled ? "border-b border-glass bg-[var(--vortex-black)]/70 backdrop-blur-xl" : "border-b border-transparent bg-gradient-to-b from-[var(--vortex-black)]/60 to-transparent"
+      scrolled ? "border-b border-glass bg-[var(--vortex-black)]/85" : "border-b border-transparent bg-gradient-to-b from-[var(--vortex-black)]/60 to-transparent"
     )}
   >
       <div className="mx-auto flex w-[min(1120px,100%-clamp(32px,6vw,80px))] items-center justify-between py-4">
@@ -46,7 +46,7 @@ function Nav({ active }) {
         <div className="flex items-center gap-2">
           <a
     href="#download"
-    className="group hidden items-center gap-2 rounded-full border border-glass bg-glass px-4 py-2 font-mono text-[12px] text-ink backdrop-blur-md transition-all hover:border-violet/60 hover:bg-violet/10 sm:flex"
+    className="group hidden items-center gap-2 rounded-full border border-glass bg-glass px-4 py-2 font-mono text-[12px] text-ink transition-all hover:border-violet/60 hover:bg-violet/10 sm:flex"
   >
             <ArrowDownToLine className="h-3.5 w-3.5 transition-transform group-hover:translate-y-0.5" />
             Get the APK
@@ -68,7 +68,7 @@ function Nav({ active }) {
     animate={{ height: "auto", opacity: 1 }}
     exit={{ height: 0, opacity: 0 }}
     transition={{ duration: 0.25 }}
-    className="overflow-hidden border-t border-glass bg-[var(--vortex-black)]/95 backdrop-blur-xl md:hidden"
+    className="overflow-hidden border-t border-glass bg-[var(--vortex-black)]/95 md:hidden"
   >
             <div className="mx-auto flex w-[min(1120px,100%-2rem)] flex-col gap-1 py-3">
               {LINKS.map((l) => <a
