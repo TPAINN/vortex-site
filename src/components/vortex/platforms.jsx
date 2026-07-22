@@ -47,7 +47,7 @@ function Platforms() {
 
         <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {PLATFORMS.map((p, i) => <Reveal key={p.name} delay={i % 4 * 0.06} y={20}>
-              <div className="group relative flex h-full items-center gap-3.5 overflow-hidden rounded-2xl border border-glass bg-glass p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-violet/40 hover:bg-white/[0.07]">
+              <div className="group relative flex h-full items-center gap-3.5 overflow-hidden rounded-2xl border border-glass bg-glass p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-violet/40 hover:bg-white/[0.07]">
                 {
     /* hover glow */
   }
@@ -83,7 +83,7 @@ function Platforms() {
     /* "and more!" special card — distinct gradient design */
   }
           <Reveal delay={11 % 4 * 0.06} y={20}>
-            <div className="group relative flex h-full cursor-default items-center gap-3.5 overflow-hidden rounded-2xl border border-violet/30 bg-gradient-to-br from-violet/15 via-blue/10 to-transparent p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-violet/60">
+            <div className="group relative flex h-full cursor-default items-center gap-3.5 overflow-hidden rounded-2xl border border-violet/30 bg-gradient-to-br from-violet/15 via-blue/10 to-transparent p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-violet/60">
               {
     /* animated gradient glow */
   }

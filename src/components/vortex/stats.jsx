@@ -29,7 +29,7 @@ function StatItem({ stat, run, index }) {
   const v = useCountUp(stat.value, run);
   const display = stat.decimals ? v.toFixed(stat.decimals) : Math.round(v).toString();
   return <Reveal delay={index * 0.1} y={20}>
-      <div className="group relative h-full overflow-hidden rounded-3xl border border-glass bg-glass p-7 backdrop-blur-md transition-colors hover:border-violet/40">
+      <div className="group relative h-full overflow-hidden rounded-3xl border border-glass bg-glass p-7 transition-colors hover:border-violet/40">
         <div
     className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
     style={{ background: "radial-gradient(circle, oklch(0.65 0.17 256 / 0.5), transparent 70%)" }}

@@ -81,7 +81,7 @@ function Download() {
     /* live waitlist counter — social proof */
   }
         <Reveal delay={0.13}>
-          {count != null && <div className="inline-flex items-center gap-2 rounded-full border border-glass bg-glass px-3.5 py-1.5 font-mono text-[11.5px] text-ink-2 backdrop-blur-md">
+          {count != null && <div className="inline-flex items-center gap-2 rounded-full border border-glass bg-glass px-3.5 py-1.5 font-mono text-[11.5px] text-ink-2">
               <Users className="h-3.5 w-3.5 text-violet" />
               <CountUpLive value={count} />
               <span className="text-ink-3">already on the list</span>
@@ -126,7 +126,7 @@ function Download() {
               </Magnetic>
             )
           ) : (
-            <div className="flex max-w-[48ch] items-center gap-3 rounded-2xl border border-glass bg-glass px-5 py-4 text-left font-display text-[14.5px] text-ink-2 backdrop-blur-md">
+            <div className="flex max-w-[48ch] items-center gap-3 rounded-2xl border border-glass bg-glass px-5 py-4 text-left font-display text-[14.5px] text-ink-2">
               <Smartphone className="h-5 w-5 shrink-0 text-violet" />
               <span>
                 <span className="text-ink">Vortex is an Android app.</span> You're on{" "}
@@ -151,7 +151,7 @@ function Download() {
               </span>
               You're on the list. Talk soon.
             </motion.div> : <form onSubmit={submit} className="flex flex-col gap-2.5 sm:flex-row">
-              <div className="flex flex-1 items-center gap-2 rounded-2xl border border-glass bg-black/40 px-4 py-3.5 backdrop-blur-md transition-colors focus-within:border-violet/60">
+              <div className="flex flex-1 items-center gap-2 rounded-2xl border border-glass bg-black/40 px-4 py-3.5 transition-colors focus-within:border-violet/60">
                 <Mail className="h-4 w-4 shrink-0 text-ink-3" />
                 <input
     type="email"

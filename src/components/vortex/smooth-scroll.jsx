@@ -6,13 +6,14 @@ function SmoothScroll({ enabled }) {
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
+    // lerp-only (no duration/easing): frame-rate-independent smoothing that
+    // gives the continuous, fluid glide. Mixing duration + lerp is contradictory
+    // — Lenis uses one model or the other.
     const lenis = new Lenis({
-      duration: 1.15,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      lerp: 0.1,
       smoothWheel: true,
       wheelMultiplier: 1,
-      touchMultiplier: 1.6,
-      lerp: 0.1
+      touchMultiplier: 1.5
     });
     let raf = 0;
     const loop = (time) => {
