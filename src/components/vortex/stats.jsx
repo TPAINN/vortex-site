@@ -48,7 +48,7 @@ function StatItem({ stat, run, index }) {
 function Stats() {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-15%" });
-  return <section ref={ref} className="relative px-4 py-16 sm:py-20">
+  return <section ref={ref} id="proof" className="relative px-4 py-16 sm:py-20">
       <div className="mx-auto grid w-[min(1120px,100%)] grid-cols-2 gap-4 lg:grid-cols-4">
         {STATS.map((s, i) => <StatItem key={s.label} stat={s} run={inView} index={i} />)}
       </div>

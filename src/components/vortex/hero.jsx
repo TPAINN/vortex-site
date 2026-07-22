@@ -1,9 +1,7 @@
-import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowDownToLine, ShieldCheck, Zap } from "lucide-react";
 import { VortexLogo } from "./vortex-logo";
 import { Magnetic } from "./use-magnetic";
-import AmbientBackground from "./ambient-background";
 const PLATFORMS = [
   "YouTube",
   "TikTok",
@@ -18,27 +16,20 @@ const PLATFORMS = [
   "Vimeo"
 ];
 function Hero({ active }) {
-  const ref = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start start", "end start"]
-  });
-  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "28%"]);
-  const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "40%"]);
-  const contentOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
+  // Fade + drift driven by GLOBAL scrollY (not a target measurement, which the
+  // reveal transform would distort). The bands are deliberately wide in px so
+  // the sub-pixel settle from smooth-scroll can't flip opacity back on — that
+  // rebound is what made the headline "reappear". The single site-wide ambient
+  // backdrop (in App) shows through the transparent hero, so there's no second
+  // heavy background painting here every frame.
+  const { scrollY } = useScroll();
+  const contentY = useTransform(scrollY, [0, 520], [0, 64]);
+  const contentOpacity = useTransform(scrollY, [0, 460], [1, 0]);
   const ease = [0.22, 1, 0.36, 1];
   return <header
-    ref={ref}
     id="top"
     className="relative flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-4 pb-16 pt-28 text-center sm:pb-20 sm:pt-32"
   >
-      {
-    /* rich layered ambient background with parallax */
-  }
-      <motion.div style={{ y: bgY }} className="absolute inset-0">
-        <AmbientBackground intensity={1} grid particles />
-      </motion.div>
-
       {
     /*
       Hero content stays INVISIBLE (opacity 0) while the splash is covering
@@ -55,13 +46,13 @@ function Hero({ active }) {
     initial={{ opacity: 0, y: 14 }}
     animate={active ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
     transition={{ delay: 0.15, duration: 0.7, ease }}
-    className="flex items-center gap-2 rounded-full border border-glass bg-glass px-3.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-2 backdrop-blur-md sm:px-4 sm:text-[11px]"
+    className="flex items-center gap-2 rounded-full border border-glass bg-white/[0.06] px-3.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-2 sm:px-4 sm:text-[11px]"
   >
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--vortex-green)] opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--vortex-green)]" />
           </span>
-          New build · v1.2.2
+          New build · v2.0.0
         </motion.div>
 
         <motion.h1
@@ -103,7 +94,7 @@ function Hero({ active }) {
             <ArrowDownToLine className="h-5 w-5 transition-transform group-hover:translate-y-0.5" />
             Download APK
             <span className="hidden font-mono text-[11px] font-normal text-white/75 sm:inline">
-              new build coming soon
+              v2.0.0 · free
             </span>
           </Magnetic>
           <Magnetic
@@ -111,7 +102,7 @@ function Hero({ active }) {
     href="#how"
     strength={10}
     aria-label="See how Vortex works"
-    className="inline-flex items-center gap-2 rounded-2xl border border-glass bg-glass px-5 py-3.5 font-display text-[15px] font-medium text-ink-2 backdrop-blur-md transition-colors hover:border-violet/50 hover:text-ink sm:px-6 sm:py-4"
+    className="inline-flex items-center gap-2 rounded-2xl border border-glass bg-white/[0.06] px-5 py-3.5 font-display text-[15px] font-medium text-ink-2 transition-colors hover:border-violet/50 hover:text-ink sm:px-6 sm:py-4"
   >
             See how it works
           </Magnetic>

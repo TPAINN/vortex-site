@@ -67,7 +67,7 @@ function SplashScreen({ onReveal }) {
       {
     /* rich layered ambient background */
   }
-      <AmbientBackground intensity={1} grid particles />
+      <AmbientBackground intensity={0.9} grid particles={false} />
 
       {
     /* top-left wordmark */
@@ -93,7 +93,7 @@ function SplashScreen({ onReveal }) {
     animate={{ opacity: 1 }}
     transition={{ delay: 0.4, duration: 0.6 }}
   >
-        v1.2.2 · 2026
+        v2.0.0 · 2026
       </motion.div>
 
       {

@@ -246,15 +246,21 @@ html.lenis body {
   to { transform: translateX(-50%); }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: oklch(0.06 0.006 290); }
+/* Custom scrollbar — slim, premium, violet on hover */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.3 0.04 290);
+  background: oklch(0.32 0.05 292 / 0.7);
   border-radius: 99px;
-  border: 2px solid oklch(0.06 0.006 290);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.2s;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--vortex-violet); }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vortex-violet);
+  background-clip: padding-box;
+}
+html { scrollbar-width: thin; scrollbar-color: oklch(0.32 0.05 292 / 0.7) transparent; }
 
 /* Hide scrollbar utility */
 .no-scrollbar::-webkit-scrollbar { display: none; }
