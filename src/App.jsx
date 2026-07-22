@@ -96,19 +96,24 @@ function AmbientBackdrop() {
             "radial-gradient(110% 70% at 50% -5%, oklch(0.13 0.045 292 / 0.85), transparent 55%), linear-gradient(180deg, oklch(0.06 0.012 290) 0%, var(--vortex-black) 50%)",
         }}
       />
+      {/* Orbs are pure soft radial-gradients — no filter:blur. A gradient is
+          already smooth, and dropping the 120px Gaussian blurs saves a huge
+          amount of GPU time every frame (they float continuously). */}
       <div
-        className="absolute -left-[15%] top-[30%] h-[55vmin] w-[55vmin] rounded-full opacity-25 blur-[120px]"
+        className="absolute -left-[15%] top-[30%] h-[55vmin] w-[55vmin] rounded-full opacity-25"
         style={{
-          background: "radial-gradient(circle, oklch(0.55 0.25 293 / 0.6), transparent 70%)",
+          background: "radial-gradient(circle, oklch(0.55 0.25 293 / 0.55) 0%, oklch(0.55 0.25 293 / 0.18) 38%, transparent 68%)",
           animation: "float-orb 26s ease-in-out infinite",
+          willChange: "transform",
         }}
       />
       <div
-        className="absolute -right-[15%] top-[60%] h-[50vmin] w-[50vmin] rounded-full opacity-20 blur-[120px]"
+        className="absolute -right-[15%] top-[60%] h-[50vmin] w-[50vmin] rounded-full opacity-20"
         style={{
-          background: "radial-gradient(circle, oklch(0.65 0.17 256 / 0.55), transparent 70%)",
+          background: "radial-gradient(circle, oklch(0.65 0.17 256 / 0.5) 0%, oklch(0.65 0.17 256 / 0.16) 38%, transparent 68%)",
           animation: "float-orb 32s ease-in-out infinite",
           animationDelay: "-8s",
+          willChange: "transform",
         }}
       />
       <div

@@ -27,29 +27,35 @@ function AmbientBackground({
       {
     /* drifting orbs */
   }
+      {/* Orbs: soft radial-gradients with NO filter:blur — animating scale on
+          a blurred layer forces expensive re-rasterisation; a gradient stays
+          composite-only and looks the same. */}
       <motion.div
-    className="orb absolute -left-[10%] top-[18%] h-[44vmin] w-[44vmin] rounded-full blur-[90px]"
+    className="orb absolute -left-[10%] top-[18%] h-[44vmin] w-[44vmin] rounded-full"
     style={{
-      background: "radial-gradient(circle, oklch(0.55 0.25 293 / 0.55), transparent 70%)",
-      opacity: 0.55 * intensity
+      background: "radial-gradient(circle, oklch(0.55 0.25 293 / 0.5) 0%, oklch(0.55 0.25 293 / 0.16) 38%, transparent 66%)",
+      opacity: 0.55 * intensity,
+      willChange: "transform"
     }}
     animate={{ x: [0, 40, -20, 0], y: [0, -30, 20, 0], scale: [1, 1.08, 0.96, 1] }}
     transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
   />
       <motion.div
-    className="orb absolute -right-[8%] top-[8%] h-[40vmin] w-[40vmin] rounded-full blur-[90px]"
+    className="orb absolute -right-[8%] top-[8%] h-[40vmin] w-[40vmin] rounded-full"
     style={{
-      background: "radial-gradient(circle, oklch(0.65 0.17 256 / 0.5), transparent 70%)",
-      opacity: 0.5 * intensity
+      background: "radial-gradient(circle, oklch(0.65 0.17 256 / 0.45) 0%, oklch(0.65 0.17 256 / 0.14) 38%, transparent 66%)",
+      opacity: 0.5 * intensity,
+      willChange: "transform"
     }}
     animate={{ x: [0, -30, 25, 0], y: [0, 25, -15, 0], scale: [1, 0.95, 1.06, 1] }}
     transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
   />
       <motion.div
-    className="orb absolute bottom-[6%] left-[35%] h-[36vmin] w-[36vmin] rounded-full blur-[100px]"
+    className="orb absolute bottom-[6%] left-[35%] h-[36vmin] w-[36vmin] rounded-full"
     style={{
-      background: "radial-gradient(circle, oklch(0.7 0.22 300 / 0.4), transparent 70%)",
-      opacity: 0.45 * intensity
+      background: "radial-gradient(circle, oklch(0.7 0.22 300 / 0.36) 0%, oklch(0.7 0.22 300 / 0.12) 38%, transparent 66%)",
+      opacity: 0.45 * intensity,
+      willChange: "transform"
     }}
     animate={{ x: [0, 30, -25, 0], y: [0, -20, 15, 0], scale: [1, 1.05, 0.97, 1] }}
     transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}

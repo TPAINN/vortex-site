@@ -183,14 +183,18 @@ html.lenis body {
   backdrop-filter: blur(12px);
 }
 
-/* Grain / noise overlay */
+/* Grain / noise overlay.
+   NOTE: no mix-blend-mode here on purpose — blending a fixed fullscreen
+   layer forces the GPU to re-blend the whole viewport on every frame of
+   every scroll/animation. Plain alpha at this opacity reads identically
+   and costs almost nothing. */
 .noise-overlay {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.035;
-  mix-blend-mode: overlay;
+  opacity: 0.022;
+  transform: translateZ(0);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -214,7 +218,12 @@ html.lenis body {
     from 0deg, transparent 0deg, oklch(0.55 0.25 293 / 0.55) 80deg,
     transparent 160deg, oklch(0.65 0.17 256 / 0.45) 250deg, transparent 330deg
   );
-  filter: blur(58px);
+  filter: blur(44px);
+  /* Rotation is the only thing that animates — will-change lets the browser
+     rasterise the blurred layer ONCE and spin the cached texture, instead of
+     re-filtering a huge surface on every frame. */
+  will-change: transform;
+  transform: translateZ(0);
   animation: vortex-spin 38s linear infinite;
 }
 .vortex-bg::after {
