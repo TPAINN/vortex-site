@@ -5,9 +5,30 @@ import { toast } from "sonner";
 import { VortexLogo } from "./vortex-logo";
 import { Magnetic } from "./use-magnetic";
 import Reveal from "./reveal";
+import { RELEASE, hasBuild, apkFor, detectDevice, resolveAndroidArch } from "@/lib/release";
+
 function Download() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("idle");
+  // Which device the visitor is on — decides whether we offer the APK, and
+  // for Android, which architecture build to serve.
+  const [device, setDevice] = useState({ os: "other", arch: null, label: "your device", isAndroid: false });
+  useEffect(() => { setDevice(detectDevice()); }, []);
+  const build = hasBuild();
+
+  // Download the correct APK for the visitor's Android device. Refines the
+  // architecture via UA Client Hints, then serves the matching build.
+  const getApk = async (e) => {
+    e.preventDefault();
+    const arch = await resolveAndroidArch(device.arch || "arm64");
+    const url = apkFor(arch);
+    if (!url) { toast.error("The build isn't published yet — join the list below."); return; }
+    const a = document.createElement("a");
+    a.href = url;
+    a.rel = "noopener";
+    a.click();
+    toast.success(`Downloading Vortex${RELEASE.versionName ? ` v${RELEASE.versionName}` : ""} for ${arch === "arm32" ? "32-bit" : "64-bit"} Android.`);
+  };
   // No backend / database on this static site, so there is no live signup
   // counter \u2014 we never invent a "already on the list" number. `count` stays
   // null and the counter pill below stays hidden.
@@ -66,24 +87,53 @@ function Download() {
             </div>}
         </Reveal>
 
-        {
-    /* APK button (honest "coming soon" state) — magnetic */
-  }
+        {/* Smart download — device-aware: serves the right APK on Android,
+            and tells everyone else it's Android-only. */}
         <Reveal delay={0.15}>
-          <Magnetic
-    as="a"
-    href="#download"
-    strength={14}
-    aria-label="Download APK (coming soon)"
-    onClick={(e) => e.preventDefault()}
-    className="btn-apk group inline-flex items-center gap-3 rounded-2xl gradient-violet px-8 py-4 font-display text-[17px] font-bold text-ink glow-violet"
-  >
-            <ArrowDownToLine className="h-5 w-5" />
-            Download APK
-            <span className="font-mono text-[11px] font-normal text-white/75">
-              new build coming soon
-            </span>
-          </Magnetic>
+          {device.isAndroid ? (
+            build ? (
+              <Magnetic
+                as="a"
+                href={apkFor(device.arch || "arm64") || "#"}
+                strength={14}
+                aria-label="Download Vortex for Android"
+                onClick={getApk}
+                className="btn-apk group inline-flex items-center gap-3 rounded-2xl gradient-violet px-8 py-4 font-display text-[17px] font-bold text-ink glow-violet"
+              >
+                <ArrowDownToLine className="h-5 w-5" />
+                Download for Android
+                {RELEASE.versionName && (
+                  <span className="font-mono text-[11px] font-normal text-white/75">
+                    v{RELEASE.versionName}
+                  </span>
+                )}
+              </Magnetic>
+            ) : (
+              <Magnetic
+                as="a"
+                href="#download"
+                strength={14}
+                aria-label="Download APK (coming soon)"
+                onClick={(e) => e.preventDefault()}
+                className="btn-apk group inline-flex items-center gap-3 rounded-2xl gradient-violet px-8 py-4 font-display text-[17px] font-bold text-ink glow-violet"
+              >
+                <ArrowDownToLine className="h-5 w-5" />
+                Download APK
+                <span className="font-mono text-[11px] font-normal text-white/75">
+                  new build coming soon
+                </span>
+              </Magnetic>
+            )
+          ) : (
+            <div className="flex max-w-[48ch] items-center gap-3 rounded-2xl border border-glass bg-glass px-5 py-4 text-left font-display text-[14.5px] text-ink-2 backdrop-blur-md">
+              <Smartphone className="h-5 w-5 shrink-0 text-violet" />
+              <span>
+                <span className="text-ink">Vortex is an Android app.</span> You're on{" "}
+                {device.label} — open this page on your Android phone to install, or drop
+                your email below and we'll ping you when it's live.
+              </span>
+            </div>
+          )}
         </Reveal>
 
         {
