@@ -71,8 +71,9 @@ function Download() {
 
         <Reveal delay={0.1}>
           <p className="max-w-[48ch] font-display text-[15.5px] text-ink-2">
-            A fresh, re-signed build is on the way. Drop your email and we'll ping
-            you the moment it's live — no spam, just the one message.
+            It's live. Grab the signed APK straight from GitHub — the button picks
+            the right build for your device. No ads, no account. Want a ping when it
+            updates? Drop your email below.
           </p>
         </Reveal>
 

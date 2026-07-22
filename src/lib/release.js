@@ -10,11 +10,12 @@
 //
 // Leave every field null and the site stays in its honest "coming soon" state.
 // Set at least one and the Android download button activates automatically.
+const REL = "https://github.com/TPAINN/vortex-site/releases/download/v2.0.0";
 export const RELEASE = {
-  versionName: null, // e.g. "1.3.0"
-  apkArm64: null,    // arm64-v8a — most phones since ~2019
-  apkArm32: null,    // armeabi-v7a — older 32-bit phones
-  apkUniversal: null, // fat APK that runs on any ABI (fallback)
+  versionName: "2.0.0",
+  apkArm64: `${REL}/Vortex-2.0.0-arm64.apk`,      // arm64-v8a — most phones/tablets since ~2017
+  apkArm32: `${REL}/Vortex-2.0.0-arm32.apk`,      // armeabi-v7a — older 32-bit devices
+  apkUniversal: `${REL}/Vortex-2.0.0-universal.apk`, // fat APK, runs on any ABI (fallback)
 };
 
 export const hasBuild = () =>

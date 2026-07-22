@@ -45,18 +45,28 @@ export default function App() {
       <AmbientBackdrop />
       <div className="noise-overlay" aria-hidden="true" />
 
+      {/*
+        Fixed chrome lives OUTSIDE the reveal wrapper on purpose: a lingering
+        transform on an ancestor turns `position: fixed` into `absolute`, so
+        keeping these siblings means the nav / dots / progress bar stay pinned
+        to the viewport and the browser can composite them independently.
+      */}
+      <SmoothScroll enabled={phase === "site"} />
+      <ScrollProgress active={phase === "site"} />
+      <SectionDots active={phase === "site"} />
+      <CustomCursor />
+      <Nav active={siteActive} />
+
+      {/* The document that "rises" during the reveal — transform + opacity only,
+          both composite-friendly (no scale: scaling a full-page layer is what
+          made the lift stutter). */}
       <motion.div
         className="relative z-[1]"
         aria-hidden={!siteActive}
-        initial={{ opacity: 0, y: "15vh", scale: 0.97 }}
-        animate={siteHidden ? { opacity: 0, y: "15vh", scale: 0.97 } : { opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1], delay: siteHidden ? 0 : 0.15 }}
+        initial={{ opacity: 0, y: "12vh" }}
+        animate={siteHidden ? { opacity: 0, y: "12vh" } : { opacity: 1, y: 0 }}
+        transition={{ duration: 1.15, ease: [0.22, 1, 0.36, 1], delay: siteHidden ? 0 : 0.1 }}
       >
-        <SmoothScroll enabled={phase === "site"} />
-        <ScrollProgress />
-        <SectionDots active={phase === "site"} />
-        <CustomCursor />
-        <Nav active={siteActive} />
         <main>
           <Hero active={siteActive} />
           <Steps />

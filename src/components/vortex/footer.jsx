@@ -73,7 +73,7 @@ function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-white/10 pt-6 font-mono text-[12px] text-ink-3 sm:flex-row sm:items-center">
-          <span>Built in Greece · v1.2.2 · 2026</span>
+          <span>Built in Greece · v2.0.0 · 2026</span>
           <span className="flex items-center gap-1.5">
             Made with <Heart className="h-3 w-3 fill-[var(--vortex-violet-bright)] text-[var(--vortex-violet-bright)]" /> for offline media
           </span>
