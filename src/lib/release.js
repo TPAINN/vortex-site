@@ -10,12 +10,13 @@
 //
 // Leave every field null and the site stays in its honest "coming soon" state.
 // Set at least one and the Android download button activates automatically.
-const REL = "https://github.com/TPAINN/vortex-site/releases/download/v2.0.0";
+const VERSION = "2.1.0";
+const REL = `https://github.com/TPAINN/vortex-site/releases/download/v${VERSION}`;
 export const RELEASE = {
-  versionName: "2.0.0",
-  apkArm64: `${REL}/Vortex-2.0.0-arm64.apk`,      // arm64-v8a — most phones/tablets since ~2017
-  apkArm32: `${REL}/Vortex-2.0.0-arm32.apk`,      // armeabi-v7a — older 32-bit devices
-  apkUniversal: `${REL}/Vortex-2.0.0-universal.apk`, // fat APK, runs on any ABI (fallback)
+  versionName: VERSION,
+  apkArm64: `${REL}/Vortex-${VERSION}-arm64.apk`,      // arm64-v8a — most phones/tablets since ~2017
+  apkArm32: `${REL}/Vortex-${VERSION}-arm32.apk`,      // armeabi-v7a — older 32-bit devices
+  apkUniversal: `${REL}/Vortex-${VERSION}-universal.apk`, // fat APK, runs on any ABI (fallback)
 };
 
 export const hasBuild = () =>

@@ -3,6 +3,7 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ChevronDown, MousePointerClick } from "lucide-react";
 import { VortexLogo } from "./vortex-logo";
 import AmbientBackground from "./ambient-background";
+import { RELEASE } from "@/lib/release";
 function SplashScreen({ onReveal }) {
   const revealedRef = useRef(false);
   const [hintPulse, setHintPulse] = useState(0);
@@ -93,7 +94,7 @@ function SplashScreen({ onReveal }) {
     animate={{ opacity: 1 }}
     transition={{ delay: 0.4, duration: 0.6 }}
   >
-        v2.0.0 · 2026
+        v{RELEASE.versionName} · 2026
       </motion.div>
 
       {

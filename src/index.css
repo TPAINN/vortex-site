@@ -301,7 +301,4 @@ html.lenis body {
 .hint-bob { animation: hint-bob 1.8s ease-in-out infinite; }
 
 /* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .vortex-bg::before, .vortex-bg::after, .orb { animation: none !important; }
-  html { scroll-behavior: auto; }
-}
+

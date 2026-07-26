@@ -2,6 +2,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowDownToLine, ShieldCheck, Zap } from "lucide-react";
 import { VortexLogo } from "./vortex-logo";
 import { Magnetic } from "./use-magnetic";
+import { RELEASE } from "@/lib/release";
 const PLATFORMS = [
   "YouTube",
   "TikTok",
@@ -52,7 +53,7 @@ function Hero({ active }) {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--vortex-green)] opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--vortex-green)]" />
           </span>
-          New build · v2.0.0
+          New build · v{RELEASE.versionName}
         </motion.div>
 
         <motion.h1
@@ -94,7 +95,7 @@ function Hero({ active }) {
             <ArrowDownToLine className="h-5 w-5 transition-transform group-hover:translate-y-0.5" />
             Download APK
             <span className="hidden font-mono text-[11px] font-normal text-white/75 sm:inline">
-              v2.0.0 · free
+              v{RELEASE.versionName} · free
             </span>
           </Magnetic>
           <Magnetic
