@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import { Toaster } from "sonner";
 
 import Preloader from "@/components/vortex/preloader";
@@ -41,6 +41,9 @@ export default function App() {
   const siteHidden = phase === "preloading" || phase === "splash";
 
   return (
+    // The motion IS the product here, so it runs regardless of the device's
+    // system-wide reduce-motion / animation-scaling setting.
+    <MotionConfig reducedMotion="never">
     <div className="relative min-h-screen bg-[var(--vortex-black)]">
       <AmbientBackdrop />
       <div className="noise-overlay" aria-hidden="true" />
@@ -93,6 +96,7 @@ export default function App() {
 
       <Toaster position="bottom-right" theme="dark" />
     </div>
+    </MotionConfig>
   );
 }
 
