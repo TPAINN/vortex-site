@@ -18,20 +18,23 @@ function SplashScreen({ onReveal }) {
     revealedRef.current = true;
     onReveal();
   }, [onReveal]);
+  // The gesture that dismisses the splash must not also scroll the page behind
+  // it. These listeners are deliberately NOT passive: a passive listener cannot
+  // call preventDefault, so the browser kept scrolling the document underneath
+  // and a firm flick landed the visitor several sections past the hero.
   useEffect(() => {
     const startY = { current: null };
     const onWheel = (e) => {
+      e.preventDefault();
       if (e.deltaY > 12) reveal();
     };
     const onTouchStart = (e) => {
       startY.current = e.touches[0]?.clientY ?? null;
     };
     const onTouchMove = (e) => {
+      e.preventDefault();
       const y = e.touches[0]?.clientY ?? null;
-      if (startY.current != null && y != null) {
-        const dy = startY.current - y;
-        if (dy > 45) reveal();
-      }
+      if (startY.current != null && y != null && startY.current - y > 45) reveal();
     };
     const onKey = (e) => {
       if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === " " || e.key === "Enter") {
@@ -39,9 +42,9 @@ function SplashScreen({ onReveal }) {
         reveal();
       }
     };
-    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("wheel", onWheel);
