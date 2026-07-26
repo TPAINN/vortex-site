@@ -27,12 +27,31 @@ export default function App() {
   const [phase, setPhase] = useState("preloading");
 
   useEffect(() => {
+    const root = document.documentElement;
     const locked = phase !== "site";
+
+    // Lock the scroll on <html> as well as <body>: on most browsers the
+    // scrolling element is <html>, so locking only <body> left the document
+    // free to move behind the splash.
+    root.style.overflow = locked ? "hidden" : "";
     document.body.style.overflow = locked ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    root.style.overscrollBehavior = locked ? "none" : "";
+
+    if (!locked) {
+      // The flick that dismissed the splash must not carry over. Land on the
+      // hero, then correct again next frame in case smooth scrolling restores
+      // a cached offset as it initialises.
+      window.scrollTo(0, 0);
+      const id = requestAnimationFrame(() => window.scrollTo(0, 0));
+      return () => cancelAnimationFrame(id);
+    }
   }, [phase]);
+
+  useEffect(() => () => {
+    document.documentElement.style.overflow = "";
+    document.documentElement.style.overscrollBehavior = "";
+    document.body.style.overflow = "";
+  }, []);
 
   const handleReveal = useCallback(() => setPhase("revealing"), []);
   const handleSplashExitComplete = useCallback(() => setPhase("site"), []);
@@ -63,11 +82,20 @@ export default function App() {
       {/* The document that "rises" during the reveal — transform + opacity only,
           both composite-friendly (no scale: scaling a full-page layer is what
           made the lift stutter). */}
+      {/* The page is uncovered from the bottom edge upwards: the clip's top inset
+          travels 100% → 0 while the content rises to meet it. Once the reveal is
+          done the clip is dropped entirely — a lingering clip-path would also
+          turn any `position: fixed` descendant into an absolute one. */}
       <motion.div
         className="relative z-[1]"
         aria-hidden={!siteActive}
-        initial={{ opacity: 0, y: "12vh" }}
-        animate={siteHidden ? { opacity: 0, y: "12vh" } : { opacity: 1, y: 0 }}
+        style={{ clipPath: phase === "site" ? "none" : undefined }}
+        initial={{ opacity: 0, y: "14vh", clipPath: "inset(100% 0% 0% 0%)" }}
+        animate={
+          siteHidden
+            ? { opacity: 0, y: "14vh", clipPath: "inset(100% 0% 0% 0%)" }
+            : { opacity: 1, y: 0, clipPath: "inset(0% 0% 0% 0%)" }
+        }
         transition={{ duration: 1.15, ease: [0.22, 1, 0.36, 1], delay: siteHidden ? 0 : 0.1 }}
       >
         <main>
