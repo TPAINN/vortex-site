@@ -10,7 +10,7 @@
 //
 // Leave every field null and the site stays in its honest "coming soon" state.
 // Set at least one and the Android download button activates automatically.
-const VERSION = "2.1.0";
+const VERSION = "3.1.0";
 const REL = `https://github.com/TPAINN/vortex-site/releases/download/v${VERSION}`;
 export const RELEASE = {
   versionName: VERSION,
