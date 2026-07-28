@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ChevronDown, MousePointerClick } from "lucide-react";
 import { VortexLogo } from "./vortex-logo";
 import AmbientBackground from "./ambient-background";
 import { RELEASE } from "@/lib/release";
-function SplashScreen({ onReveal }) {
-  const revealedRef = useRef(false);
+function SplashScreen({ progress }) {
   const [hintPulse, setHintPulse] = useState(0);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
@@ -13,46 +12,15 @@ function SplashScreen({ onReveal }) {
   const sy = useSpring(my, { stiffness: 120, damping: 18 });
   const logoX = useTransform(sx, [-0.5, 0.5], [-10, 10]);
   const logoY = useTransform(sy, [-0.5, 0.5], [-10, 10]);
-  const reveal = useCallback(() => {
-    if (revealedRef.current) return;
-    revealedRef.current = true;
-    onReveal();
-  }, [onReveal]);
-  // The gesture that dismisses the splash must not also scroll the page behind
-  // it. These listeners are deliberately NOT passive: a passive listener cannot
-  // call preventDefault, so the browser kept scrolling the document underneath
-  // and a firm flick landed the visitor several sections past the hero.
-  useEffect(() => {
-    const startY = { current: null };
-    const onWheel = (e) => {
-      e.preventDefault();
-      if (e.deltaY > 12) reveal();
-    };
-    const onTouchStart = (e) => {
-      startY.current = e.touches[0]?.clientY ?? null;
-    };
-    const onTouchMove = (e) => {
-      e.preventDefault();
-      const y = e.touches[0]?.clientY ?? null;
-      if (startY.current != null && y != null && startY.current - y > 45) reveal();
-    };
-    const onKey = (e) => {
-      if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === " " || e.key === "Enter") {
-        e.preventDefault();
-        reveal();
-      }
-    };
-    window.addEventListener("wheel", onWheel, { passive: false });
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: false });
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("wheel", onWheel);
-      window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener("touchmove", onTouchMove);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [reveal]);
+  // The curtain no longer decides when to leave. App owns the reveal progress
+  // and drives it from the gesture, so this only reflects it: the panel lifts
+  // and fades exactly as far as the visitor has pulled, and comes back down if
+  // they pull the other way.
+  const curtainY = useTransform(progress, [0, 1], ["0%", "-100%"]);
+  const curtainOpacity = useTransform(progress, [0, 0.75, 1], [1, 1, 0]);
+  const contentOpacity = useTransform(progress, [0, 0.45], [1, 0]);
+  const contentY = useTransform(progress, [0, 1], ["0px", "-60px"]);
+
   useEffect(() => {
     const t = setInterval(() => setHintPulse((p) => p + 1), 2600);
     return () => clearInterval(t);
@@ -65,13 +33,18 @@ function SplashScreen({ onReveal }) {
   return <motion.div
     className="fixed inset-0 z-[90] flex flex-col items-center justify-center overflow-hidden bg-[var(--vortex-black)]"
     onMouseMove={handleMouseMove}
-    initial={{ y: 0 }}
-    exit={{ y: "-100%", transition: { duration: 1.15, ease: [0.76, 0, 0.24, 1] } }}
+    style={{ y: curtainY, opacity: curtainOpacity }}
+    exit={{ opacity: 0, transition: { duration: 0.35 } }}
   >
       {
     /* rich layered ambient background */
   }
       <AmbientBackground intensity={0.9} grid particles={false} />
+      <motion.div
+        className="pointer-events-none absolute inset-0"
+        style={{ opacity: contentOpacity, y: contentY }}
+        aria-hidden="true"
+      />
 
       {
     /* top-left wordmark */
@@ -172,7 +145,6 @@ function SplashScreen({ onReveal }) {
   }
         <motion.button
     type="button"
-    onClick={reveal}
     className="group relative mt-10 flex flex-col items-center gap-4 outline-none sm:mt-12"
     initial={{ opacity: 0, y: 14 }}
     animate={{ opacity: 1, y: 0 }}

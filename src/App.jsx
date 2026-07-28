@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { motion, AnimatePresence, MotionConfig } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { Toaster } from "sonner";
 
 import Preloader from "@/components/vortex/preloader";
@@ -26,6 +26,89 @@ import Footer from "@/components/vortex/footer";
 export default function App() {
   const [phase, setPhase] = useState("preloading");
 
+  /**
+   * How far the curtain has been pulled, 0 to 1, driven by the gesture itself.
+   *
+   * The reveal used to be a timed animation triggered by the first flick: one
+   * scroll dismissed the splash, a 1.15s clip ran on its own clock, and the
+   * document was forced back to 0 when the lock lifted. A firm scroll therefore
+   * showed the page already moved and then snapped it to the hero — the jump.
+   *
+   * Now the gesture *is* the animation. The document stays locked at 0 for the
+   * whole reveal, so there is never an offset to correct, and pulling back up
+   * closes the curtain again.
+   */
+  const revealRaw = useMotionValue(0);
+  const reveal = useSpring(revealRaw, { stiffness: 220, damping: 40, mass: 0.6 });
+
+  // How much scrolling completes the reveal. Roughly one firm flick.
+  const REVEAL_DISTANCE = 620;
+
+  useEffect(() => {
+    if (phase !== "splash") return;
+
+    let acc = 0;
+    let touchY = null;
+
+    const advance = (delta) => {
+      acc = Math.max(0, Math.min(REVEAL_DISTANCE, acc + delta));
+      revealRaw.set(acc / REVEAL_DISTANCE);
+      if (acc >= REVEAL_DISTANCE) setPhase("revealing");
+    };
+
+    // Not passive: a passive listener cannot preventDefault, and the document
+    // would scroll underneath the splash while the curtain was still up.
+    const onWheel = (e) => {
+      e.preventDefault();
+      advance(e.deltaY);
+    };
+    const onTouchStart = (e) => {
+      touchY = e.touches[0]?.clientY ?? null;
+    };
+    const onTouchMove = (e) => {
+      e.preventDefault();
+      const y = e.touches[0]?.clientY ?? null;
+      if (touchY != null && y != null) {
+        advance((touchY - y) * 1.6);
+        touchY = y;
+      }
+    };
+    const onKey = (e) => {
+      if (["ArrowDown", "PageDown", " ", "Enter"].includes(e.key)) {
+        e.preventDefault();
+        // Keyboard has no magnitude, so it commits in one press.
+        advance(REVEAL_DISTANCE);
+      }
+    };
+    const onClick = () => advance(REVEAL_DISTANCE);
+
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("click", onClick);
+    };
+  }, [phase, revealRaw]);
+
+  // Once committed, carry the last of the curtain up on its own and hand over.
+  useEffect(() => {
+    if (phase !== "revealing") return;
+    revealRaw.set(1);
+    const t = setTimeout(() => setPhase("site"), 620);
+    return () => clearTimeout(t);
+  }, [phase, revealRaw]);
+
+  // The site is uncovered from its bottom edge upward as the curtain rises.
+  const siteClip = useTransform(reveal, (v) => `inset(${(1 - v) * 100}% 0% 0% 0%)`);
+  const siteY = useTransform(reveal, [0, 1], ["14vh", "0vh"]);
+  const siteOpacity = useTransform(reveal, [0, 0.25, 1], [0, 0.55, 1]);
+
   useEffect(() => {
     const root = document.documentElement;
     const locked = phase !== "site";
@@ -37,14 +120,9 @@ export default function App() {
     document.body.style.overflow = locked ? "hidden" : "";
     root.style.overscrollBehavior = locked ? "none" : "";
 
-    if (!locked) {
-      // The flick that dismissed the splash must not carry over. Land on the
-      // hero, then correct again next frame in case smooth scrolling restores
-      // a cached offset as it initialises.
-      window.scrollTo(0, 0);
-      const id = requestAnimationFrame(() => window.scrollTo(0, 0));
-      return () => cancelAnimationFrame(id);
-    }
+    // No corrective scrollTo here on purpose. The document is held at 0 for the
+    // entire reveal, so by the time the lock lifts there is no offset to undo —
+    // and it was that correction the visitor saw as a jump back to the hero.
   }, [phase]);
 
   useEffect(() => () => {
@@ -52,9 +130,6 @@ export default function App() {
     document.documentElement.style.overscrollBehavior = "";
     document.body.style.overflow = "";
   }, []);
-
-  const handleReveal = useCallback(() => setPhase("revealing"), []);
-  const handleSplashExitComplete = useCallback(() => setPhase("site"), []);
 
   const siteActive = phase === "revealing" || phase === "site";
   const siteHidden = phase === "preloading" || phase === "splash";
@@ -88,15 +163,15 @@ export default function App() {
           turn any `position: fixed` descendant into an absolute one. */}
       <motion.div
         className="relative z-[1]"
-        aria-hidden={!siteActive}
-        style={{ clipPath: phase === "site" ? "none" : undefined }}
-        initial={{ opacity: 0, y: "14vh", clipPath: "inset(100% 0% 0% 0%)" }}
-        animate={
-          siteHidden
-            ? { opacity: 0, y: "14vh", clipPath: "inset(100% 0% 0% 0%)" }
-            : { opacity: 1, y: 0, clipPath: "inset(0% 0% 0% 0%)" }
+        aria-hidden={phase === "preloading"}
+        style={
+          phase === "site"
+            ? // Drop the clip and the transform once the reveal is done: either
+              // one left on an ancestor turns every `position: fixed`
+              // descendant into an absolute one.
+              { clipPath: "none", opacity: 1 }
+            : { clipPath: siteClip, y: siteY, opacity: siteOpacity }
         }
-        transition={{ duration: 1.15, ease: [0.22, 1, 0.36, 1], delay: siteHidden ? 0 : 0.1 }}
       >
         <main>
           <Hero active={siteActive} />
@@ -116,9 +191,9 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence onExitComplete={handleSplashExitComplete}>
-        {phase === "splash" && (
-          <SplashScreen key="splash" onReveal={handleReveal} />
+      <AnimatePresence>
+        {(phase === "splash" || phase === "revealing") && (
+          <SplashScreen key="splash" progress={reveal} />
         )}
       </AnimatePresence>
 
