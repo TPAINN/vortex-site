@@ -29,15 +29,25 @@ function StatItem({ stat, run, index }) {
   const v = useCountUp(stat.value, run);
   const display = stat.decimals ? v.toFixed(stat.decimals) : Math.round(v).toString();
   return <Reveal delay={index * 0.1} y={20}>
-      <div className="group relative h-full overflow-hidden rounded-3xl border border-glass bg-glass p-7 transition-colors hover:border-violet/40">
+      <div className="group relative h-full overflow-hidden rounded-3xl border border-glass bg-glass p-5 transition-colors hover:border-violet/40 sm:p-7">
         <div
     className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
     style={{ background: "radial-gradient(circle, oklch(0.65 0.17 256 / 0.5), transparent 70%)" }}
   />
-        <div className="relative font-display text-[clamp(2.4rem,5vw,3.4rem)] font-extrabold leading-none tracking-[-0.03em] text-ink tabular-nums">
-          {stat.prefix}
-          {display}
-          {stat.suffix && <span className="gradient-vortex-text">{stat.suffix}</span>}
+        {/* The unit is set smaller than the number it qualifies. At equal size
+            "320kbps" is the longest string in the set and overflowed its column
+            on a phone — the card clips, so it read as cut off. Smaller is also
+            simply how a stat should be set: 320 is the datum, kbps is the unit. */}
+        <div className="relative flex min-w-0 items-baseline font-display font-extrabold leading-none tracking-[-0.03em] text-ink tabular-nums">
+          <span className="text-[clamp(2.1rem,5vw,3.4rem)]">
+            {stat.prefix}
+            {display}
+          </span>
+          {stat.suffix && (
+            <span className="gradient-vortex-text text-[clamp(1.15rem,2.6vw,1.9rem)]">
+              {stat.suffix}
+            </span>
+          )}
         </div>
         <div className="relative mt-3 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-3">
           {stat.label}
