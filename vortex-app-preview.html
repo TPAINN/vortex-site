@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>Vortex — app preview</title>
+    <style>
+      /*
+        A live, interactive spec for the new Vortex app UI. Everything here is a
+        design review, not the shipped app — but every interaction the brief
+        described is real and tappable so the feel can be judged before a line of
+        Kotlin is written: splash, particle-wave background, the centred search
+        bar that expands on focus, paste underneath, link-detection that hides
+        paste + shrinks + lifts the bar with the source preview appearing below,
+        the four themes behind the gear, and the history screen with a back arrow.
+      */
+      :root {
+        /* Dark (default) — a professional near-black indigo, not pure black. */
+        --bg: #0e0f17;
+        --bg-2: #161826;
+        --surface: #1b1e30;
+        --surface-2: #232741;
+        --line: #2c3050;
+        --ink: #eef0fb;
+        --ink-2: #a7abce;
+        --ink-3: #6b6f95;
+        --accent: #7c6cff;
+        --accent-2: #9b8cff;
+        --on-accent: #ffffff;
+        --particle: 124, 108, 255;
+        --radius: 20px;
+        --radius-sm: 14px;
+      }
+      .phone[data-theme="amoled"] {
+        --bg: #000000;
+        --bg-2: #070709;
+        --surface: #0d0d12;
+        --surface-2: #16161d;
+        --line: #23232e;
+        --ink: #f4f4f8;
+        --ink-2: #9a9aae;
+        --ink-3: #5c5c70;
+        --accent: #8a7bff;
+        --accent-2: #a99cff;
+        --particle: 138, 123, 255;
+      }
+      .phone[data-theme="light"] {
+        --bg: #f4f4fb;
+        --bg-2: #ffffff;
+        --surface: #ffffff;
+        --surface-2: #f0f0f8;
+        --line: #e2e2ef;
+        --ink: #1a1b2e;
+        --ink-2: #5a5c78;
+        --ink-3: #9a9cb6;
+        --accent: #6355e6;
+        --accent-2: #7a6cf0;
+        --on-accent: #ffffff;
+        --particle: 99, 85, 230;
+      }
+      .phone[data-theme="materialu"] {
+        --bg: #f7f2fa;
+        --bg-2: #fffbfe;
+        --surface: #fffbfe;
+        --surface-2: #ece6f0;
+        --line: #e6dfeb;
+        --ink: #1d1b20;
+        --ink-2: #49454f;
+        --ink-3: #7a757f;
+        --accent: #6750a4;
+        --accent-2: #7f67be;
+        --on-accent: #ffffff;
+        --particle: 103, 80, 164;
+        --radius: 28px;
+        --radius-sm: 20px;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+      html, body { height: 100%; }
+      body {
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #05050a;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+
+      /* Phone frame so the review reads as an app, not a web page. */
+      .phone {
+        position: relative;
+        width: min(400px, 100vw);
+        height: min(860px, 100vh);
+        background: var(--bg);
+        overflow: hidden;
+        transition: background 0.5s ease;
+        color: var(--ink);
+        display: flex;
+        flex-direction: column;
+      }
+      @media (min-width: 420px) and (min-height: 880px) {
+        .phone { border-radius: 44px; box-shadow: 0 30px 90px rgba(0,0,0,0.6); border: 1px solid #1a1a24; }
+      }
+
+      canvas#waves { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+
+      /* ── Splash ── */
+      .splash {
+        position: absolute; inset: 0; z-index: 40;
+        background: var(--bg);
+        display: grid; place-items: center;
+        transition: opacity 0.6s ease, visibility 0.6s;
+      }
+      .splash.gone { opacity: 0; visibility: hidden; }
+      .splash-mark {
+        width: 74px; height: 74px; position: relative;
+        animation: spin 2.4s cubic-bezier(0.5,0,0.2,1) infinite;
+      }
+      .ring { position: absolute; inset: 0; border-radius: 50%; border: 6px solid transparent; }
+      .ring.outer { border-color: var(--accent); opacity: 0.9; }
+      .ring.inner { inset: 16px; border-top-color: var(--accent-2); border-right-color: var(--accent-2); }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .splash-word {
+        position: absolute; margin-top: 128px;
+        font-weight: 800; letter-spacing: 6px; font-size: 15px; color: var(--ink-2);
+        opacity: 0; animation: fadeUp 0.9s ease 0.4s forwards;
+      }
+      @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 0.9; transform: none; } }
+
+      /* ── Top bar ── */
+      .topbar {
+        position: relative; z-index: 10;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 22px 22px 0;
+      }
+      .brand { font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
+      .brand b { color: var(--accent); }
+      .top-actions { display: flex; gap: 8px; }
+      .icon-btn {
+        width: 42px; height: 42px; border-radius: 13px;
+        background: var(--surface); border: 1px solid var(--line);
+        display: grid; place-items: center; color: var(--ink-2);
+        cursor: pointer; transition: transform 0.15s, border-color 0.2s, color 0.2s;
+      }
+      .icon-btn:active { transform: scale(0.92); }
+      .icon-btn svg { width: 19px; height: 19px; }
+
+      /* ── Main area ── */
+      .stage { position: relative; z-index: 10; flex: 1; display: flex; flex-direction: column; }
+
+      /* The centred search zone. It starts vertically centred and lifts up when a
+         link is recognised — driven by justify-content on this flex column. */
+      .search-zone {
+        flex: 1; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 16px; padding: 0 22px;
+        transition: justify-content 0.6s cubic-bezier(0.22,1,0.36,1);
+      }
+      .phone[data-mode="preview"] .search-zone { justify-content: flex-start; padding-top: 20px; }
+
+      .search-wrap { width: 100%; max-width: 340px; transition: max-width 0.6s cubic-bezier(0.22,1,0.36,1); }
+      .phone[data-mode="preview"] .search-wrap { max-width: 300px; }
+
+      .search {
+        display: flex; align-items: center; gap: 12px;
+        background: var(--surface); border: 1.5px solid var(--line);
+        border-radius: 16px; padding: 0 16px; height: 58px;
+        transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s, height 0.4s;
+      }
+      .search.focused {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px rgba(var(--particle), 0.14), 0 8px 30px rgba(var(--particle), 0.18);
+      }
+      .phone[data-mode="preview"] .search { height: 50px; }
+      .search svg.mag { width: 20px; height: 20px; color: var(--ink-3); flex-shrink: 0; transition: color 0.3s; }
+      .search.focused svg.mag { color: var(--accent); }
+      .search input {
+        flex: 1; background: none; border: none; outline: none;
+        color: var(--ink); font-size: 15.5px; font-family: inherit;
+      }
+      .search input::placeholder { color: var(--ink-3); }
+      .search .clear { color: var(--ink-3); cursor: pointer; display: none; }
+      .search input:not(:placeholder-shown) ~ .clear { display: block; }
+
+      /* Paste sits under the bar and hides once the user is typing a link. */
+      .paste {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: var(--surface-2); border: 1px solid var(--line);
+        color: var(--ink-2); font-weight: 600; font-size: 14px;
+        padding: 12px 22px; border-radius: 13px; cursor: pointer;
+        transition: opacity 0.3s, transform 0.3s, background 0.2s;
+      }
+      .paste:active { transform: scale(0.95); }
+      .paste svg { width: 16px; height: 16px; }
+      .paste.hidden { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+
+      .hint { color: var(--ink-3); font-size: 12.5px; letter-spacing: 0.3px; }
+      .paste.hidden ~ .hint { display: none; }
+
+      /* ── Source preview ── */
+      .preview {
+        width: 100%; max-width: 340px; margin: 20px auto 0;
+        opacity: 0; transform: translateY(16px); pointer-events: none;
+        transition: opacity 0.5s ease 0.15s, transform 0.5s cubic-bezier(0.22,1,0.36,1) 0.15s;
+      }
+      .phone[data-mode="preview"] .preview { opacity: 1; transform: none; pointer-events: auto; }
+      .preview-card {
+        background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--radius); overflow: hidden;
+      }
+      .thumb {
+        height: 158px; background: linear-gradient(135deg, var(--surface-2), var(--surface));
+        position: relative; display: grid; place-items: center;
+      }
+      .thumb .platform {
+        position: absolute; top: 12px; left: 12px;
+        background: rgba(0,0,0,0.55); color: #fff; backdrop-filter: blur(6px);
+        font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
+        padding: 5px 11px; border-radius: 999px; text-transform: uppercase;
+      }
+      .thumb .badge18 {
+        position: absolute; top: 12px; right: 12px;
+        background: #ef5b6b; color: #fff; font-size: 10.5px; font-weight: 800;
+        padding: 5px 9px; border-radius: 8px; display: none;
+      }
+      .thumb.age .badge18 { display: block; }
+      .thumb .glyph { width: 46px; height: 46px; color: var(--ink-3); }
+      .meta { padding: 15px 16px 6px; }
+      .meta .title { font-weight: 700; font-size: 15px; line-height: 1.3; }
+      .meta .sub { color: var(--ink-3); font-size: 12.5px; margin-top: 4px; }
+      .methods { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 16px; }
+      .method {
+        display: flex; align-items: center; gap: 12px;
+        background: var(--surface-2); border: 1px solid var(--line);
+        border-radius: var(--radius-sm); padding: 13px 15px; cursor: pointer;
+        transition: transform 0.15s, border-color 0.2s;
+      }
+      .method:active { transform: scale(0.98); }
+      .method.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+      .method .m-ic { width: 20px; height: 20px; flex-shrink: 0; }
+      .method .m-main { flex: 1; }
+      .method .m-t { font-weight: 700; font-size: 14px; }
+      .method .m-s { font-size: 12px; opacity: 0.75; margin-top: 1px; }
+      .method .dl { width: 18px; height: 18px; opacity: 0.8; }
+
+      /* ── History screen ── */
+      .history {
+        position: absolute; inset: 0; z-index: 20;
+        background: var(--bg); transform: translateX(100%);
+        transition: transform 0.5s cubic-bezier(0.22,1,0.36,1);
+        display: flex; flex-direction: column;
+      }
+      .history.open { transform: none; }
+      .history .h-top { display: flex; align-items: center; gap: 14px; padding: 22px 22px 8px; }
+      .history .h-top .title { font-weight: 800; font-size: 20px; }
+      .h-list { flex: 1; overflow-y: auto; padding: 10px 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+      .h-item {
+        display: flex; align-items: center; gap: 13px;
+        background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--radius-sm); padding: 13px 15px;
+      }
+      .h-item .h-thumb { width: 46px; height: 46px; border-radius: 11px; background: var(--surface-2); flex-shrink: 0; display:grid; place-items:center; }
+      .h-item .h-thumb svg { width: 20px; height: 20px; color: var(--ink-3); }
+      .h-item .h-main { flex: 1; min-width: 0; }
+      .h-item .h-t { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .h-item .h-s { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+      .h-item .h-plat { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; }
+
+      /* ── Theme sheet ── */
+      .scrim {
+        position: absolute; inset: 0; z-index: 30; background: rgba(0,0,0,0.5);
+        opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s;
+      }
+      .scrim.open { opacity: 1; visibility: visible; }
+      .sheet {
+        position: absolute; left: 0; right: 0; bottom: 0; z-index: 31;
+        background: var(--bg-2); border-top-left-radius: 26px; border-top-right-radius: 26px;
+        border-top: 1px solid var(--line);
+        transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.22,1,0.36,1);
+        padding: 12px 20px 30px;
+      }
+      .sheet.open { transform: none; }
+      .grip { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 16px; }
+      .sheet h3 { font-size: 16px; margin-bottom: 4px; }
+      .sheet p { font-size: 12.5px; color: var(--ink-3); margin-bottom: 16px; }
+      .themes { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+      .theme-opt {
+        display: flex; align-items: center; gap: 11px;
+        border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+        padding: 13px 14px; cursor: pointer; transition: border-color 0.2s;
+      }
+      .theme-opt.active { border-color: var(--accent); }
+      .swatch { width: 30px; height: 30px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+      .theme-opt .t-name { font-weight: 600; font-size: 13.5px; }
+      .theme-opt .check { margin-left: auto; color: var(--accent); opacity: 0; }
+      .theme-opt.active .check { opacity: 1; }
+
+      /* Small helper so the search-animation ref is visibly honoured: the bar
+         width springs in on focus. */
+      @keyframes barPop { 0% { transform: scale(0.97); } 60% { transform: scale(1.015); } 100% { transform: scale(1); } }
+      .search.focused { animation: barPop 0.45s cubic-bezier(0.22,1,0.36,1); }
+    </style>
+  </head>
+  <body>
+    <div class="phone" id="phone" data-theme="dark" data-mode="idle">
+      <canvas id="waves"></canvas>
+
+      <!-- Splash -->
+      <div class="splash" id="splash">
+        <div class="splash-mark"><div class="ring outer"></div><div class="ring inner"></div></div>
+        <div class="splash-word">VORTEX</div>
+      </div>
+
+      <!-- Top bar -->
+      <div class="topbar">
+        <div class="brand">Vor<b>tex</b></div>
+        <div class="top-actions">
+          <div class="icon-btn" id="historyBtn" title="History" aria-label="History">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 3"/></svg>
+          </div>
+          <div class="icon-btn" id="gearBtn" title="Themes" aria-label="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main -->
+      <div class="stage">
+        <div class="search-zone">
+          <div class="search-wrap">
+            <div class="search" id="search">
+              <svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <input id="input" type="text" placeholder="Paste or type a link…" autocomplete="off" spellcheck="false" />
+              <svg class="clear" id="clear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </div>
+          </div>
+          <button class="paste" id="pasteBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+            Paste link
+          </button>
+          <div class="hint">on-device · no account · no watermark</div>
+
+          <!-- Source preview -->
+          <div class="preview" id="preview">
+            <div class="preview-card">
+              <div class="thumb" id="thumb">
+                <span class="platform" id="platform">Media</span>
+                <span class="badge18">18+ verified</span>
+                <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m10 8 6 4-6 4V8Z"/><rect x="2" y="3" width="20" height="18" rx="3"/></svg>
+              </div>
+              <div class="meta">
+                <div class="title" id="pvTitle">Detecting source…</div>
+                <div class="sub" id="pvSub">Reading the link on-device</div>
+              </div>
+              <div class="methods" id="methods"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History screen -->
+      <div class="history" id="history">
+        <div class="h-top">
+          <div class="icon-btn" id="backBtn" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          </div>
+          <div class="title">History</div>
+        </div>
+        <div class="h-list" id="hList"></div>
+      </div>
+
+      <!-- Theme sheet -->
+      <div class="scrim" id="scrim"></div>
+      <div class="sheet" id="sheet">
+        <div class="grip"></div>
+        <h3>Theme</h3>
+        <p>Pick how Vortex looks. The particle background adapts to each.</p>
+        <div class="themes" id="themeGrid">
+          <div class="theme-opt" data-t="dark"><span class="swatch" style="background:#0e0f17"></span><span class="t-name">Dark</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
+          <div class="theme-opt" data-t="amoled"><span class="swatch" style="background:#000"></span><span class="t-name">AMOLED</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
+          <div class="theme-opt" data-t="light"><span class="swatch" style="background:#f4f4fb"></span><span class="t-name">Light</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
+          <div class="theme-opt" data-t="materialu"><span class="swatch" style="background:linear-gradient(135deg,#6750a4,#f7f2fa)"></span><span class="t-name">Material U</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const phone = $("phone");
+
+      // ── Splash ──
+      setTimeout(() => $("splash").classList.add("gone"), 1500);
+
+      // ── Particle-wave background ──
+      // A slow, minimal field of drifting dots joined by faint lines — reads well
+      // on both dark and light grounds because it draws with the theme's accent.
+      const canvas = $("waves"), ctx = canvas.getContext("2d");
+      let W, H, dots = [];
+      function resize() {
+        const r = phone.getBoundingClientRect();
+        W = canvas.width = r.width * devicePixelRatio;
+        H = canvas.height = r.height * devicePixelRatio;
+        canvas.style.width = r.width + "px"; canvas.style.height = r.height + "px";
+        const count = Math.round((r.width * r.height) / 14000);
+        dots = Array.from({ length: count }, () => ({
+          x: Math.random() * W, y: Math.random() * H,
+          vx: (Math.random() - 0.5) * 0.12 * devicePixelRatio,
+          vy: (Math.random() - 0.5) * 0.12 * devicePixelRatio,
+          r: (Math.random() * 1.4 + 0.6) * devicePixelRatio,
+        }));
+      }
+      function tick() {
+        const c = getComputedStyle(phone).getPropertyValue("--particle").trim();
+        ctx.clearRect(0, 0, W, H);
+        for (const d of dots) {
+          d.x += d.vx; d.y += d.vy;
+          if (d.x < 0 || d.x > W) d.vx *= -1;
+          if (d.y < 0 || d.y > H) d.vy *= -1;
+        }
+        // Links
+        for (let i = 0; i < dots.length; i++) {
+          for (let j = i + 1; j < dots.length; j++) {
+            const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
+            const dist = Math.hypot(dx, dy), max = 120 * devicePixelRatio;
+            if (dist < max) {
+              ctx.strokeStyle = `rgba(${c}, ${(1 - dist / max) * 0.12})`;
+              ctx.lineWidth = devicePixelRatio * 0.6;
+              ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke();
+            }
+          }
+        }
+        for (const d of dots) {
+          ctx.fillStyle = `rgba(${c}, 0.5)`;
+          ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 7); ctx.fill();
+        }
+        requestAnimationFrame(tick);
+      }
+      resize(); tick();
+      window.addEventListener("resize", resize);
+
+      // ── Search focus animation ──
+      const search = $("search"), input = $("input"), paste = $("pasteBtn");
+      input.addEventListener("focus", () => search.classList.add("focused"));
+      input.addEventListener("blur", () => { if (!input.value) search.classList.remove("focused"); });
+      $("clear").addEventListener("click", () => { input.value = ""; input.dispatchEvent(new Event("input")); input.focus(); });
+
+      // ── Platform recognition ──
+      const PLATFORMS = [
+        { re: /tiktok\.com|vm\.tiktok/i, name: "TikTok", title: "TikTok video", sub: "@creator · 0:24", age: false,
+          methods: [["Video · 1080p", "MP4 · no watermark", true], ["Audio only", "MP3 · 320 kbps", false]] },
+        { re: /youtu\.be|youtube\.com\/watch|music\.youtube/i, name: "YouTube", title: "YouTube video", sub: "Channel · 4:12", age: false,
+          methods: [["Video · 1080p", "MP4 · H.264", true], ["Video · 720p", "MP4 · smaller", false], ["Audio only", "MP3 · 320 kbps", false]] },
+        { re: /music\.youtube/i, name: "YT Music", title: "Track", sub: "Artist · Album", age: false,
+          methods: [["Audio", "MP3 · 320 kbps + tags", true]] },
+        { re: /threads\.com|threads\.net/i, name: "Threads", title: "Threads post", sub: "@user · media", age: false,
+          methods: [["Save media", "Photos + video", true], ["Audio", "MP3", false]] },
+        { re: /instagram\.com/i, name: "Instagram", title: "Instagram", sub: "Reel or post", age: false,
+          methods: [["Video · HD", "MP4", true], ["Audio only", "MP3", false]] },
+        { re: /spotify\.com/i, name: "Spotify", title: "Spotify track", sub: "Artist · matched on YouTube", age: false,
+          methods: [["Audio", "MP3 · 320 kbps + art", true]] },
+        { re: /soundcloud\.com/i, name: "SoundCloud", title: "SoundCloud", sub: "Uploader · track", age: false,
+          methods: [["Audio", "MP3 · tagged", true]] },
+        { re: /twitch\.tv/i, name: "Twitch", title: "Twitch clip", sub: "Streamer · clip", age: false,
+          methods: [["Video · source", "MP4", true]] },
+        { re: /vimeo\.com/i, name: "Vimeo", title: "Vimeo video", sub: "Creator", age: false,
+          methods: [["Video · HD", "MP4", true]] },
+        { re: /reddit\.com/i, name: "Reddit", title: "Reddit post", sub: "r/subreddit · media", age: true,
+          methods: [["Video + audio", "MP4 merged", true], ["Audio only", "MP3", false]] },
+        { re: /x\.com|twitter\.com/i, name: "X", title: "X post", sub: "@handle · media", age: false,
+          methods: [["Video · best", "MP4", true]] },
+        { re: /facebook\.com|fb\.watch/i, name: "Facebook", title: "Facebook video", sub: "Page · video", age: false,
+          methods: [["Video · HD", "MP4", true]] },
+      ];
+      const looksLikeLink = (t) => /^https?:\/\/\S{6,}/i.test(t.trim());
+      const match = (t) => PLATFORMS.find((p) => p.re.test(t)) || { name: "Media", title: "Media source", sub: "on-device extraction", age: false, methods: [["Best available", "auto", true]] };
+
+      const dlIcon = '<svg class="dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
+      const mIcon = '<svg class="m-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m10 8 6 4-6 4V8Z"/></svg>';
+
+      let detectTimer = null;
+      const history = [];
+
+      function renderPreview(p, url) {
+        $("platform").textContent = p.name;
+        $("pvTitle").textContent = p.title;
+        $("pvSub").textContent = p.sub;
+        $("thumb").classList.toggle("age", !!p.age);
+        $("methods").innerHTML = p.methods.map(([t, s, primary]) =>
+          `<div class="method ${primary ? "primary" : ""}">${mIcon}<div class="m-main"><div class="m-t">${t}</div><div class="m-s">${s}</div></div>${dlIcon}</div>`
+        ).join("");
+        if (!history.some((h) => h.url === url)) history.unshift({ url, name: p.name, title: p.title });
+      }
+
+      function onType() {
+        const v = input.value;
+        const isLink = looksLikeLink(v);
+        paste.classList.toggle("hidden", v.length > 0);
+        clearTimeout(detectTimer);
+        if (isLink) {
+          // Simulate the on-device detect: a short beat, then the paste text is
+          // "accepted", the bar shrinks + lifts, preview slides in.
+          detectTimer = setTimeout(() => {
+            const p = match(v);
+            renderPreview(p, v);
+            phone.dataset.mode = "preview";
+            input.blur();
+          }, 550);
+        } else if (v.length === 0) {
+          phone.dataset.mode = "idle";
+        }
+      }
+      input.addEventListener("input", onType);
+
+      // Paste button → simulate reading the clipboard with a real-ish link.
+      paste.addEventListener("click", async () => {
+        let text = "https://vm.tiktok.com/ZN9rED9Wge8tw-2Oe7q/";
+        try { const c = await navigator.clipboard.readText(); if (looksLikeLink(c)) text = c.trim(); } catch (e) {}
+        input.value = text; onType();
+      });
+
+      // ── Gear / theme sheet ──
+      const scrim = $("scrim"), sheet = $("sheet");
+      const openSheet = () => { scrim.classList.add("open"); sheet.classList.add("open"); };
+      const closeSheet = () => { scrim.classList.remove("open"); sheet.classList.remove("open"); };
+      $("gearBtn").addEventListener("click", openSheet);
+      scrim.addEventListener("click", closeSheet);
+      function setActiveTheme(t) {
+        phone.dataset.theme = t;
+        document.querySelectorAll(".theme-opt").forEach((o) => o.classList.toggle("active", o.dataset.t === t));
+      }
+      document.querySelectorAll(".theme-opt").forEach((o) =>
+        o.addEventListener("click", () => { setActiveTheme(o.dataset.t); setTimeout(closeSheet, 220); }));
+      setActiveTheme("dark");
+
+      // ── History screen ──
+      const hScreen = $("history");
+      $("historyBtn").addEventListener("click", () => {
+        const list = $("hList");
+        list.innerHTML = history.length
+          ? history.map((h) => `<div class="h-item"><div class="h-thumb">${mIcon.replace("m-ic", "").replace('class=""', '')}</div><div class="h-main"><div class="h-t">${h.title}</div><div class="h-s" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.url}</div></div><div class="h-plat">${h.name}</div></div>`).join("")
+          : `<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:60px 20px">No downloads yet.<br>Paste a link on the home screen.</div>`;
+        hScreen.classList.add("open");
+      });
+      $("backBtn").addEventListener("click", () => hScreen.classList.remove("open"));
+    </script>
+  </body>
+</html>
