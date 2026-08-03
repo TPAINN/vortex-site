@@ -223,6 +223,7 @@
       }
       .thumb.age .badge18 { display: block; }
       .thumb .glyph { width: 46px; height: 46px; color: var(--ink-3); }
+      .thumb.nodl { opacity: 0.82; }
       .meta { padding: 15px 16px 6px; }
       .meta .title { font-weight: 700; font-size: 15px; line-height: 1.3; }
       .meta .sub { color: var(--ink-3); font-size: 12.5px; margin-top: 4px; }
@@ -240,6 +241,13 @@
       .method .m-t { font-weight: 700; font-size: 14px; }
       .method .m-s { font-size: 12px; opacity: 0.75; margin-top: 1px; }
       .method .dl { width: 18px; height: 18px; opacity: 0.8; }
+      .note-row {
+        display: flex; align-items: center; gap: 11px;
+        background: var(--surface-2); border: 1px dashed var(--line);
+        border-radius: var(--radius-sm); padding: 13px 15px;
+        color: var(--ink-2); font-size: 12.5px; line-height: 1.4;
+      }
+      .note-row svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--ink-3); }
 
       /* ── History screen ── */
       .history {
@@ -442,51 +450,210 @@
       input.addEventListener("blur", () => { if (!input.value) search.classList.remove("focused"); });
       $("clear").addEventListener("click", () => { input.value = ""; input.dispatchEvent(new Event("input")); input.focus(); });
 
+      // ── URL normalization ──
+      // Real pastes are messy: no scheme, stray whitespace, zero-width chars
+      // copied from chat apps, tracking params. Resolve to a real URL object
+      // (not a whole-string regex — that's how "https://evil.com/?u=youtube.com"
+      // used to false-match YouTube) or return null.
+      function normalizeUrl(raw) {
+        const ZW_RE = new RegExp("[" + String.fromCharCode(8203) + "-" + String.fromCharCode(8205) + String.fromCharCode(65279) + "]", "g");
+        let t = (raw || "").trim().replace(ZW_RE, "");
+        if (!t) return null;
+        if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(t)) {
+          if (/^[\w-]+(\.[\w-]+)+([/?#]|$)/i.test(t)) t = "https://" + t;
+          else return null;
+        }
+        try {
+          const u = new URL(t);
+          return /^https?:$/.test(u.protocol) ? u : null;
+        } catch { return null; }
+      }
+      const bareHost = (u) => u.hostname.replace(/^(www|m|mobile|web)\./, "");
+      const segs = (u) => u.pathname.split("/").filter(Boolean);
+      const looksLikeLink = (t) => !!normalizeUrl(t);
+
+      // ── Method-set + result shapes ──
+      const METHOD_SETS = {
+        video: (q = "1080p") => [[`Video · ${q}`, "MP4 · no watermark", true], ["Audio only", "MP3 · 320 kbps", false]],
+        videoOnly: (q = "best") => [[`Video · ${q}`, "MP4", true]],
+        audio: (q = "320 kbps") => [["Audio", `MP3 · ${q} + tags`, true]],
+        auto: () => [["Best quality", "Photo or video, auto-detected", true], ["Audio only", "If the post has video", false]],
+        imageSet: () => [["Photos", "Original quality, ZIP if multiple", true], ["Audio", "Background track, if any", false]],
+        direct: () => [["Direct file", "Original quality, as hosted", true]],
+      };
+      const media = (type, title, sub, methods, opts = {}) =>
+        ({ downloadable: true, type, title, sub, methods, glyph: type, ...opts });
+      const unsupported = (title, note) =>
+        ({ downloadable: false, type: "unsupported", title, sub: "No downloadable media here", note, methods: [], glyph: "locked" });
+
       // ── Platform recognition ──
+      // Each entry matches on the real hostname, then classifies by path shape
+      // into either a downloadable media type or an honest "not downloadable"
+      // result (profile/community/channel pages, DRM'd catalog links, etc.)
+      // rather than faking a download button for a page with nothing to fetch.
       const PLATFORMS = [
-        { re: /tiktok\.com|vm\.tiktok/i, name: "TikTok", title: "TikTok video", sub: "@creator · 0:24", age: false,
-          methods: [["Video · 1080p", "MP4 · no watermark", true], ["Audio only", "MP3 · 320 kbps", false]] },
-        { re: /youtu\.be|youtube\.com\/watch|music\.youtube/i, name: "YouTube", title: "YouTube video", sub: "Channel · 4:12", age: false,
-          methods: [["Video · 1080p", "MP4 · H.264", true], ["Video · 720p", "MP4 · smaller", false], ["Audio only", "MP3 · 320 kbps", false]] },
-        { re: /music\.youtube/i, name: "YT Music", title: "Track", sub: "Artist · Album", age: false,
-          methods: [["Audio", "MP3 · 320 kbps + tags", true]] },
-        { re: /threads\.com|threads\.net/i, name: "Threads", title: "Threads post", sub: "@user · media", age: false,
-          methods: [["Save media", "Photos + video", true], ["Audio", "MP3", false]] },
-        { re: /instagram\.com/i, name: "Instagram", title: "Instagram", sub: "Reel or post", age: false,
-          methods: [["Video · HD", "MP4", true], ["Audio only", "MP3", false]] },
-        { re: /spotify\.com/i, name: "Spotify", title: "Spotify track", sub: "Artist · matched on YouTube", age: false,
-          methods: [["Audio", "MP3 · 320 kbps + art", true]] },
-        { re: /soundcloud\.com/i, name: "SoundCloud", title: "SoundCloud", sub: "Uploader · track", age: false,
-          methods: [["Audio", "MP3 · tagged", true]] },
-        { re: /twitch\.tv/i, name: "Twitch", title: "Twitch clip", sub: "Streamer · clip", age: false,
-          methods: [["Video · source", "MP4", true]] },
-        { re: /vimeo\.com/i, name: "Vimeo", title: "Vimeo video", sub: "Creator", age: false,
-          methods: [["Video · HD", "MP4", true]] },
-        { re: /reddit\.com/i, name: "Reddit", title: "Reddit post", sub: "r/subreddit · media", age: true,
-          methods: [["Video + audio", "MP4 merged", true], ["Audio only", "MP3", false]] },
-        { re: /x\.com|twitter\.com/i, name: "X", title: "X post", sub: "@handle · media", age: false,
-          methods: [["Video · best", "MP4", true]] },
-        { re: /facebook\.com|fb\.watch/i, name: "Facebook", title: "Facebook video", sub: "Page · video", age: false,
-          methods: [["Video · HD", "MP4", true]] },
+        { name: "TikTok", match: (h) => h === "tiktok.com" || h === "vm.tiktok.com" || h === "vt.tiktok.com",
+          classify(u, h, p) {
+            if (h === "vm.tiktok.com" || h === "vt.tiktok.com") return media("video", "TikTok · shared link", "Resolves to video or photo post", METHOD_SETS.video());
+            if (p[1] === "video" && p[2]) return media("video", `${p[0]} · video`, "TikTok · no watermark", METHOD_SETS.video());
+            if (p[1] === "photo" && p[2]) return media("image", `${p[0]} · photo post`, "TikTok slideshow", METHOD_SETS.imageSet());
+            if (p.length === 1 && p[0].startsWith("@")) return unsupported("TikTok profile", "Paste a link to a specific video or photo post instead");
+            return unsupported("TikTok page", "No downloadable media on this page");
+          } },
+        { name: "YouTube", match: (h) => h === "youtube.com" || h === "youtu.be" || h === "music.youtube.com",
+          classify(u, h, p) {
+            const music = h === "music.youtube.com";
+            if (h === "youtu.be" && p[0]) return media("video", music ? "YouTube Music track" : "YouTube video", "Shared link", music ? METHOD_SETS.audio() : METHOD_SETS.video());
+            if (p[0] === "shorts" && p[1]) return media("video", "YouTube Shorts", "Vertical video", METHOD_SETS.video());
+            if (p[0] === "watch" && u.searchParams.get("v")) return music
+              ? media("audio", "YouTube Music track", "Tagged with cover art", METHOD_SETS.audio())
+              : media("video", "YouTube video", "Standard upload", [["Video · 1080p", "MP4 · H.264", true], ["Video · 720p", "MP4 · smaller", false], ["Audio only", "MP3 · 320 kbps", false]]);
+            if (p[0] === "playlist") return unsupported("YouTube playlist", "Paste a link to an individual video instead");
+            if (p[0] === "channel" || (p[0] || "").startsWith("@")) return unsupported("YouTube channel", "Paste a link to a specific video instead");
+            return unsupported("YouTube", "No downloadable media detected");
+          } },
+        { name: "Instagram", match: (h) => h === "instagram.com",
+          classify(u, h, p) {
+            if (p[0] === "p" && p[1]) return media("video", "Instagram post", "Photo or video · quality preserved", METHOD_SETS.auto());
+            if ((p[0] === "reel" || p[0] === "reels") && p[1]) return media("video", "Instagram Reel", "Vertical video", METHOD_SETS.video());
+            if (p[0] === "tv" && p[1]) return media("video", "IGTV video", "Long-form video", METHOD_SETS.video());
+            if (p[0] === "stories" && p[1] && p[2]) return media("image", "Instagram story", `@${p[1]} · expires after 24h`, METHOD_SETS.auto());
+            if (p[0] === "explore") return unsupported("Instagram discovery", "No downloadable media on this page");
+            if (p.length === 1) return unsupported("Instagram profile", "Paste a link to a specific post or reel instead");
+            return unsupported("Instagram", "No downloadable media detected");
+          } },
+        { name: "Facebook", match: (h) => h === "facebook.com" || h === "fb.watch" || h === "fb.me",
+          classify(u, h, p) {
+            if (h === "fb.watch" || h === "fb.me") return media("video", "Facebook video", "Shared link", METHOD_SETS.video());
+            if (u.pathname === "/sharer/sharer.php") return unsupported("Facebook share tool", "This is a share dialog, not a content link — paste the original post link");
+            if (p[0] === "watch") return media("video", "Facebook video", "Watch page", METHOD_SETS.video());
+            if (p[0] === "reel" && p[1]) return media("video", "Facebook Reel", "Vertical video", METHOD_SETS.video());
+            if (p.includes("videos")) return media("video", "Facebook video", "Page video", METHOD_SETS.video());
+            if (p.includes("posts") || u.searchParams.has("story_fbid")) return media("video", "Facebook post", "Photo or video, if attached", METHOD_SETS.auto());
+            if (p[0] === "share") return media("video", "Facebook · shared link", "Resolves on-device", METHOD_SETS.video());
+            if (p[0] === "groups" || p[0] === "events") return unsupported(`Facebook ${p[0] === "groups" ? "group" : "event"}`, "No downloadable media on this page");
+            if (p.length >= 1) return unsupported("Facebook profile or page", "Paste a link to a specific video or post instead");
+            return unsupported("Facebook", "No downloadable media detected");
+          } },
+        { name: "X", match: (h) => h === "x.com" || h === "twitter.com",
+          classify(u, h, p) {
+            if (p[1] === "status" && p[2]) return media("video", "X post", `@${p[0]} · media, if any`, METHOD_SETS.videoOnly());
+            if (p[0] === "i") return unsupported("X system page", "No downloadable media on this page");
+            if (p.length === 1) return unsupported("X / Twitter profile", "Paste a link to a specific post instead");
+            return unsupported("X / Twitter", "No downloadable media detected");
+          } },
+        { name: "Reddit", match: (h) => h === "reddit.com",
+          classify(u, h, p) {
+            if (p[0] === "r" && p[2] === "comments") return media("video", "Reddit post", `r/${p[1]} · video merges audio automatically`, [["Video + audio", "MP4 merged", true], ["Audio only", "MP3", false]], { age: true });
+            if (p[0] === "r" && p[2] === "s") return media("video", "Reddit · shared link", `r/${p[1]}`, METHOD_SETS.video(), { age: true });
+            if (p[0] === "r") return unsupported(`r/${p[1] || ""}`, "This is a community page, not a post");
+            if (p[0] === "user" || p[0] === "u") return unsupported("Reddit profile", "Paste a link to a specific post instead");
+            return unsupported("Reddit", "No downloadable media detected");
+          } },
+        { name: "Pinterest", match: (h) => h === "pinterest.com" || h === "pin.it",
+          classify(u, h, p) {
+            if (h === "pin.it") return media("image", "Pinterest · shared pin", "Resolves on-device", METHOD_SETS.imageSet());
+            if (p[0] === "pin" && p[1]) return media("image", "Pinterest pin", "Photo or video pin", METHOD_SETS.auto());
+            if (p.length >= 2) return unsupported("Pinterest board", "This is a collection, not a single pin");
+            if (p.length === 1) return unsupported("Pinterest profile", "Paste a link to a specific pin instead");
+            return unsupported("Pinterest", "No downloadable media detected");
+          } },
+        { name: "LinkedIn", match: (h) => h === "linkedin.com",
+          classify(u, h, p) {
+            if (p[0] === "posts" || p[0] === "feed") return media("video", "LinkedIn post", "Video, if attached", METHOD_SETS.auto());
+            if (p[0] === "in") return unsupported("LinkedIn profile", "Paste a link to a specific post instead");
+            if (p[0] === "company") return unsupported("LinkedIn company page", "Paste a link to a specific post instead");
+            if (p[0] === "events") return unsupported("LinkedIn event", "Live recordings aren't supported");
+            return unsupported("LinkedIn", "No downloadable media detected");
+          } },
+        { name: "Snapchat", match: (h) => h === "snapchat.com",
+          classify(u, h, p) {
+            if (p[0] === "spotlight" || p[0] === "p") return media("video", "Snapchat Spotlight", "Public share", METHOD_SETS.video());
+            if (p[0] === "add") return unsupported("Snapchat profile link", "This adds a friend — it isn't a content link");
+            if (p[0] === "t") return media("video", "Snapchat · shared link", "Resolves on-device", METHOD_SETS.video());
+            return unsupported("Snapchat", "No downloadable media detected");
+          } },
+        { name: "Discord", match: (h) => ["discord.gg", "discord.com", "cdn.discordapp.com", "media.discordapp.net"].includes(h),
+          classify(u, h, p) {
+            if (h === "cdn.discordapp.com" || h === "media.discordapp.net") return media("video", "Discord attachment", "Direct file link · original quality", METHOD_SETS.direct());
+            if (h === "discord.gg" || p[0] === "invite") return unsupported("Discord invite", "This joins a server — it isn't a content link");
+            if (p[0] === "channels") return unsupported("Discord channel", "Attachments are permission-gated and not publicly downloadable");
+            return unsupported("Discord", "No downloadable media detected");
+          } },
+        { name: "Threads", match: (h) => h === "threads.com" || h === "threads.net",
+          classify(u, h, p) {
+            if (p[1] === "post" && p[2]) return media("video", "Threads post", `${p[0]} · media`, METHOD_SETS.auto());
+            if (p.length === 1) return unsupported("Threads profile", "Paste a link to a specific post instead");
+            return unsupported("Threads", "No downloadable media detected");
+          } },
+        { name: "Spotify", match: (h) => h === "open.spotify.com" || h === "spotify.com",
+          classify(u, h, p) {
+            if (p[0] === "track") return media("audio", "Spotify track", "Matched + fetched via YouTube", METHOD_SETS.audio());
+            if (p[0] === "episode") return media("audio", "Spotify episode", "Podcast episode", METHOD_SETS.audio());
+            if (["album", "playlist", "show"].includes(p[0])) return unsupported(`Spotify ${p[0]}`, "DRM-protected — paste an individual track or episode link instead");
+            if (p[0] === "artist" || p[0] === "user") return unsupported("Spotify profile", "Paste a link to a specific track instead");
+            return unsupported("Spotify", "No downloadable media detected");
+          } },
+        { name: "SoundCloud", match: (h) => h === "soundcloud.com",
+          classify(u, h, p) {
+            if (p.length >= 2 && p[1] === "sets") return unsupported("SoundCloud playlist", "Paste a link to an individual track instead");
+            if (p.length >= 2) return media("audio", "SoundCloud track", `${p[0]} · track`, METHOD_SETS.audio());
+            return unsupported("SoundCloud profile", "Paste a link to a specific track instead");
+          } },
+        { name: "Twitch", match: (h) => h === "twitch.tv" || h === "clips.twitch.tv" || h === "m.twitch.tv",
+          classify(u, h, p) {
+            if (h === "clips.twitch.tv" && p[0]) return media("video", "Twitch clip", "Source quality", METHOD_SETS.videoOnly("source"));
+            if (p[0] === "videos" && p[1]) return media("video", "Twitch VOD", "Full broadcast", METHOD_SETS.videoOnly());
+            if (p.includes("clip")) return media("video", "Twitch clip", "Source quality", METHOD_SETS.videoOnly("source"));
+            if (p.length === 1) return unsupported("Twitch channel", "Live streams aren't supported — paste a clip or VOD link");
+            return unsupported("Twitch", "No downloadable media detected");
+          } },
+        { name: "Vimeo", match: (h) => h === "vimeo.com",
+          classify(u, h, p) {
+            if (/^\d+$/.test(p[0] || "")) return media("video", "Vimeo video", "Creator upload", METHOD_SETS.videoOnly("HD"));
+            return unsupported("Vimeo page", "Paste a link to a specific video instead");
+          } },
       ];
-      const looksLikeLink = (t) => /^https?:\/\/\S{6,}/i.test(t.trim());
-      const match = (t) => PLATFORMS.find((p) => p.re.test(t)) || { name: "Media", title: "Media source", sub: "on-device extraction", age: false, methods: [["Best available", "auto", true]] };
+
+      function detectPlatform(raw) {
+        const u = normalizeUrl(raw);
+        if (!u) return null;
+        const h = bareHost(u);
+        const p = segs(u);
+        const plat = PLATFORMS.find((pl) => pl.match(h));
+        if (plat) return { name: plat.name, ...plat.classify(u, h, p) };
+        // Unknown host: yt-dlp covers 1000+ extractors beyond the advertised
+        // list, so a best-effort generic attempt is honest, not a lie.
+        return { name: "Media", ...media("video", "Media source", "on-device extraction · yt-dlp compatible", METHOD_SETS.video()) };
+      }
 
       const dlIcon = '<svg class="dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
       const mIcon = '<svg class="m-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m10 8 6 4-6 4V8Z"/></svg>';
+      const infoIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>';
+      const GLYPHS = {
+        video: '<path d="m10 8 6 4-6 4V8Z"/><rect x="2" y="3" width="20" height="18" rx="3"/>',
+        audio: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+        image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+        locked: '<rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+      };
 
       let detectTimer = null;
       const history = [];
 
-      function renderPreview(p, url) {
-        $("platform").textContent = p.name;
-        $("pvTitle").textContent = p.title;
-        $("pvSub").textContent = p.sub;
-        $("thumb").classList.toggle("age", !!p.age);
-        $("methods").innerHTML = p.methods.map(([t, s, primary]) =>
-          `<div class="method ${primary ? "primary" : ""}">${mIcon}<div class="m-main"><div class="m-t">${t}</div><div class="m-s">${s}</div></div>${dlIcon}</div>`
-        ).join("");
-        if (!history.some((h) => h.url === url)) history.unshift({ url, name: p.name, title: p.title });
+      function renderPreview(res, url) {
+        $("platform").textContent = res.name;
+        $("pvTitle").textContent = res.title;
+        $("pvSub").textContent = res.sub;
+        const thumb = $("thumb");
+        thumb.classList.toggle("age", !!res.age);
+        thumb.classList.toggle("nodl", !res.downloadable);
+        thumb.querySelector(".glyph").innerHTML = GLYPHS[res.glyph] || GLYPHS.video;
+        $("methods").innerHTML = res.downloadable && res.methods.length
+          ? res.methods.map(([t, s, primary]) =>
+              `<div class="method ${primary ? "primary" : ""}">${mIcon}<div class="m-main"><div class="m-t">${t}</div><div class="m-s">${s}</div></div>${dlIcon}</div>`
+            ).join("")
+          : `<div class="note-row">${infoIcon}<div>${res.note || res.sub}</div></div>`;
+        if (!history.some((h) => h.url === url)) history.unshift({ url, name: res.name, title: res.title, downloadable: res.downloadable });
       }
 
       function onType() {
@@ -498,8 +665,8 @@
           // Simulate the on-device detect: a short beat, then the paste text is
           // "accepted", the bar shrinks + lifts, preview slides in.
           detectTimer = setTimeout(() => {
-            const p = match(v);
-            renderPreview(p, v);
+            const res = detectPlatform(v);
+            renderPreview(res, v);
             phone.dataset.mode = "preview";
             input.blur();
           }, 550);
@@ -515,6 +682,83 @@
         try { const c = await navigator.clipboard.readText(); if (looksLikeLink(c)) text = c.trim(); } catch (e) {}
         input.value = text; onType();
       });
+
+      // ── Self-test (dev only): exercises the detector against a broad sample
+      // of real-shaped URLs across every advertised platform + edge cases, and
+      // reports pass/fail to the console. Re-run any time from the console via
+      // window.__vortexSelfTest().
+      window.__vortexSelfTest = function () {
+        const cases = [
+          ["https://www.tiktok.com/@zachking/video/6768504823336815877", "TikTok", true],
+          ["https://vm.tiktok.com/ZN9rED9Wge8tw/", "TikTok", true],
+          ["https://vt.tiktok.com/ZS6abcdef/", "TikTok", true],
+          ["tiktok.com/@zachking", "TikTok", false],
+          ["https://www.tiktok.com/@zachking/photo/7123456789", "TikTok", true],
+          ["https://youtu.be/dQw4w9WgXcQ", "YouTube", true],
+          ["https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s", "YouTube", true],
+          ["https://www.youtube.com/shorts/abc123XYZ", "YouTube", true],
+          ["https://music.youtube.com/watch?v=abc123XYZ", "YouTube", true],
+          ["https://www.youtube.com/@mkbhd", "YouTube", false],
+          ["https://www.youtube.com/playlist?list=PL123", "YouTube", false],
+          ["https://www.instagram.com/p/CzX1abc/", "Instagram", true],
+          ["https://www.instagram.com/reel/CzX1abc/", "Instagram", true],
+          ["https://www.instagram.com/stories/nasa/123456789/", "Instagram", true],
+          ["https://www.instagram.com/nasa/", "Instagram", false],
+          ["https://www.facebook.com/watch/?v=1234567890", "Facebook", true],
+          ["https://fb.watch/abc123/", "Facebook", true],
+          ["https://www.facebook.com/reel/1234567890", "Facebook", true],
+          ["https://www.facebook.com/nasa", "Facebook", false],
+          ["https://www.facebook.com/sharer/sharer.php?u=https://example.com", "Facebook", false],
+          ["https://x.com/nasa/status/1234567890123456789", "X", true],
+          ["https://twitter.com/nasa", "X", false],
+          ["https://www.reddit.com/r/space/comments/abc123/title/", "Reddit", true],
+          ["https://www.reddit.com/r/space/", "Reddit", false],
+          ["https://www.reddit.com/user/spez/", "Reddit", false],
+          ["https://www.pinterest.com/pin/1234567890/", "Pinterest", true],
+          ["https://pin.it/abc123", "Pinterest", true],
+          ["https://www.pinterest.com/nasa/space/", "Pinterest", false],
+          ["https://www.linkedin.com/posts/satyanadella_activity-123", "LinkedIn", true],
+          ["https://www.linkedin.com/in/satyanadella/", "LinkedIn", false],
+          ["https://www.linkedin.com/company/microsoft/", "LinkedIn", false],
+          ["https://www.snapchat.com/spotlight/abc123", "Snapchat", true],
+          ["https://www.snapchat.com/add/nasa", "Snapchat", false],
+          ["https://cdn.discordapp.com/attachments/1/2/clip.mp4", "Discord", true],
+          ["https://discord.gg/abc123", "Discord", false],
+          ["https://discord.com/channels/1/2", "Discord", false],
+          ["https://www.threads.net/@nasa/post/CzX1abc", "Threads", true],
+          ["https://www.threads.net/@nasa", "Threads", false],
+          ["https://open.spotify.com/track/6habFhsOp2NvshLv26DqMb", "Spotify", true],
+          ["https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M", "Spotify", false],
+          ["https://soundcloud.com/artist/track-name", "SoundCloud", true],
+          ["https://soundcloud.com/artist", "SoundCloud", false],
+          ["https://soundcloud.com/artist/sets/album-name", "SoundCloud", false],
+          ["https://clips.twitch.tv/AbcDefGhiJkl", "Twitch", true],
+          ["https://www.twitch.tv/videos/1234567890", "Twitch", true],
+          ["https://www.twitch.tv/ninja", "Twitch", false],
+          ["https://vimeo.com/76979871", "Vimeo", true],
+          ["https://vimeo.com/channels/staffpicks", "Vimeo", false],
+          ["   https://youtu.be/dQw4w9WgXcQ   ", "YouTube", true],
+          ["HTTPS://X.COM/nasa/status/1234567890123456789", "X", true],
+          ["not a link at all", null, null],
+          ["", null, null],
+          ["https://example.com/some/random/page", "Media", true],
+        ];
+        let pass = 0, fail = 0;
+        console.group("%cVortex link-detection self-test", "font-weight:bold");
+        for (const [url, expectName, expectDl] of cases) {
+          const link = looksLikeLink(url);
+          const res = link ? detectPlatform(url) : null;
+          const gotName = res ? res.name : null;
+          const gotDl = res ? res.downloadable : null;
+          const ok = gotName === expectName && (expectName === null || gotDl === expectDl);
+          ok ? pass++ : fail++;
+          console.log(ok ? "✅" : "❌", JSON.stringify(url), "→", gotName, gotDl, ok ? "" : `(expected ${expectName}, ${expectDl})`);
+        }
+        console.log(`${pass}/${cases.length} passed, ${fail} failed`);
+        console.groupEnd();
+        return { pass, fail, total: cases.length };
+      };
+      window.__vortexSelfTest();
 
       // ── Gear / theme sheet ──
       const scrim = $("scrim"), sheet = $("sheet");
