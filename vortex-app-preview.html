@@ -582,6 +582,7 @@
           } },
         { name: "Threads", match: (h) => h === "threads.com" || h === "threads.net",
           classify(u, h, p) {
+            if (p[0] === "share" && p[1]) return media("video", "Threads · shared link", "Resolves to the original post", METHOD_SETS.auto());
             if (p[1] === "post" && p[2]) return media("video", "Threads post", `${p[0]} · media`, METHOD_SETS.auto());
             if (p.length === 1) return unsupported("Threads profile", "Paste a link to a specific post instead");
             return unsupported("Threads", "No downloadable media detected");
@@ -737,6 +738,17 @@
           ["https://www.twitch.tv/ninja", "Twitch", false],
           ["https://vimeo.com/76979871", "Vimeo", true],
           ["https://vimeo.com/channels/staffpicks", "Vimeo", false],
+          // Real links Apostolos pasted 2026-08-03 — caught the Threads /share/
+          // bug below (was falling through to unsupported).
+          ["https://www.instagram.com/p/DakQe9RDuTZ/?img_index=3&igsh=YmxteHUydjZ5b3Q=", "Instagram", true],
+          ["https://www.instagram.com/reel/DbZD6IjPaKJ/?igsh=Zjk1d2hkZXhkOGZj", "Instagram", true],
+          ["https://www.threads.com/share/BBG3JDs9VG/", "Threads", true],
+          ["https://www.threads.com/share/BAR_xsu_HL/", "Threads", true],
+          ["https://vm.tiktok.com/ZN8dArHYa/", "TikTok", true],
+          ["https://vm.tiktok.com/ZN9hPDSXcQG94-4SMvp/", "TikTok", true],
+          ["https://music.youtube.com/watch?v=Jz_J-gIbM6Q", "YouTube", true],
+          ["https://youtube.com/shorts/Ux8r8kvKcE4", "YouTube", true],
+          ["http://youtube.com/post/Ugkxeqb12_NWLnoaGNjf16cmg43jCXvcdZua", "YouTube", false],
           ["   https://youtu.be/dQw4w9WgXcQ   ", "YouTube", true],
           ["HTTPS://X.COM/nasa/status/1234567890123456789", "X", true],
           ["not a link at all", null, null],
