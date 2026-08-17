@@ -6,16 +6,23 @@
     <title>Vortex — app preview</title>
     <style>
       /*
-        A live, interactive spec for the new Vortex app UI. Everything here is a
-        design review, not the shipped app — but every interaction the brief
-        described is real and tappable so the feel can be judged before a line of
-        Kotlin is written: splash, particle-wave background, the centred search
-        bar that expands on focus, paste underneath, link-detection that hides
-        paste + shrinks + lifts the bar with the source preview appearing below,
-        the four themes behind the gear, and the history screen with a back arrow.
+        A live, interactive spec for the Vortex app UI. Everything is tappable so
+        the feel can be judged before it is built in Compose.
+
+        The part that carries the most weight is the recognition system: a pasted
+        link is classified into WHAT IT ACTUALLY CONTAINS — one video, a set of
+        photos, an audio track, or nothing downloadable — and only the options
+        that fit that content are offered. A photo carousel gets a picker with a
+        checkbox per image; an audio track still gets artwork, because a file
+        with no thumbnail looks broken in a gallery.
       */
+
+      /* ── Themes ──────────────────────────────────────────────────────────
+         Five: dark (default), amoled, light, and Material You in both light
+         and dark. Material You is a different SHAPE language, not just other
+         colours — larger radii, softer tonal surfaces — so it is worth having
+         as its own pair rather than a tint of the others. */
       :root {
-        /* Dark (default) — a professional near-black indigo, not pure black. */
         --bg: #0e0f17;
         --bg-2: #161826;
         --surface: #1b1e30;
@@ -28,309 +35,396 @@
         --accent-2: #9b8cff;
         --on-accent: #ffffff;
         --particle: 124, 108, 255;
+        --ok: #3fd1a0;
+        --warn: #ef5b6b;
         --radius: 20px;
         --radius-sm: 14px;
+        --radius-xs: 10px;
       }
       .phone[data-theme="amoled"] {
-        --bg: #000000;
-        --bg-2: #070709;
-        --surface: #0d0d12;
-        --surface-2: #16161d;
-        --line: #23232e;
-        --ink: #f4f4f8;
-        --ink-2: #9a9aae;
-        --ink-3: #5c5c70;
-        --accent: #8a7bff;
-        --accent-2: #a99cff;
-        --particle: 138, 123, 255;
+        --bg: #000000; --bg-2: #070709; --surface: #0d0d12; --surface-2: #16161d;
+        --line: #23232e; --ink: #f4f4f8; --ink-2: #9a9aae; --ink-3: #5c5c70;
+        --accent: #8a7bff; --accent-2: #a99cff; --particle: 138, 123, 255;
       }
       .phone[data-theme="light"] {
-        --bg: #f4f4fb;
-        --bg-2: #ffffff;
-        --surface: #ffffff;
-        --surface-2: #f0f0f8;
-        --line: #e2e2ef;
-        --ink: #1a1b2e;
-        --ink-2: #5a5c78;
-        --ink-3: #9a9cb6;
-        --accent: #6355e6;
-        --accent-2: #7a6cf0;
-        --on-accent: #ffffff;
-        --particle: 99, 85, 230;
+        --bg: #f4f4fb; --bg-2: #ffffff; --surface: #ffffff; --surface-2: #f0f0f8;
+        --line: #e2e2ef; --ink: #1a1b2e; --ink-2: #5a5c78; --ink-3: #9a9cb6;
+        --accent: #6355e6; --accent-2: #7a6cf0; --on-accent: #ffffff;
+        --particle: 99, 85, 230; --ok: #14a67c;
       }
-      .phone[data-theme="materialu"] {
-        --bg: #f7f2fa;
-        --bg-2: #fffbfe;
-        --surface: #fffbfe;
-        --surface-2: #ece6f0;
-        --line: #e6dfeb;
-        --ink: #1d1b20;
-        --ink-2: #49454f;
-        --ink-3: #7a757f;
-        --accent: #6750a4;
-        --accent-2: #7f67be;
-        --on-accent: #ffffff;
-        --particle: 103, 80, 164;
-        --radius: 28px;
-        --radius-sm: 20px;
+      .phone[data-theme="mu-light"] {
+        --bg: #f7f2fa; --bg-2: #fffbfe; --surface: #fffbfe; --surface-2: #ece6f0;
+        --line: #e6dfeb; --ink: #1d1b20; --ink-2: #49454f; --ink-3: #7a757f;
+        --accent: #6750a4; --accent-2: #7f67be; --on-accent: #ffffff;
+        --particle: 103, 80, 164; --ok: #146c4e;
+        --radius: 28px; --radius-sm: 20px; --radius-xs: 16px;
+      }
+      .phone[data-theme="mu-dark"] {
+        --bg: #141218; --bg-2: #1d1b20; --surface: #211f26; --surface-2: #2b2930;
+        --line: #36343b; --ink: #e6e0e9; --ink-2: #cac4d0; --ink-3: #938f99;
+        --accent: #d0bcff; --accent-2: #e8ddff; --on-accent: #381e72;
+        --particle: 208, 188, 255; --ok: #6fd9ae;
+        --radius: 28px; --radius-sm: 20px; --radius-xs: 16px;
       }
 
       * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
       html, body { height: 100%; }
       body {
         font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-        background: #05050a;
-        display: grid;
-        place-items: center;
-        overflow: hidden;
+        background: #05050a; display: grid; place-items: center; overflow: hidden;
       }
 
-      /* Phone frame so the review reads as an app, not a web page. */
       .phone {
-        position: relative;
-        width: min(400px, 100vw);
-        height: min(860px, 100vh);
-        background: var(--bg);
-        overflow: hidden;
-        transition: background 0.5s ease;
-        color: var(--ink);
-        display: flex;
-        flex-direction: column;
+        position: relative; width: min(400px, 100vw); height: min(860px, 100vh);
+        background: var(--bg); overflow: hidden; color: var(--ink);
+        display: flex; flex-direction: column;
+        transition: background 0.45s ease, color 0.45s ease;
       }
       @media (min-width: 420px) and (min-height: 880px) {
         .phone { border-radius: 44px; box-shadow: 0 30px 90px rgba(0,0,0,0.6); border: 1px solid #1a1a24; }
       }
-
       canvas#waves { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
 
       /* ── Splash ── */
       .splash {
-        position: absolute; inset: 0; z-index: 40;
-        background: var(--bg);
-        display: grid; place-items: center;
-        transition: opacity 0.6s ease, visibility 0.6s;
+        position: absolute; inset: 0; z-index: 60; background: var(--bg);
+        display: grid; place-items: center; transition: opacity 0.6s ease, visibility 0.6s;
       }
       .splash.gone { opacity: 0; visibility: hidden; }
-      .splash-mark {
-        width: 74px; height: 74px; position: relative;
-        animation: spin 2.4s cubic-bezier(0.5,0,0.2,1) infinite;
-      }
+      .splash-mark { width: 74px; height: 74px; position: relative; animation: spin 2.4s cubic-bezier(0.5,0,0.2,1) infinite; }
       .ring { position: absolute; inset: 0; border-radius: 50%; border: 6px solid transparent; }
       .ring.outer { border-color: var(--accent); opacity: 0.9; }
       .ring.inner { inset: 16px; border-top-color: var(--accent-2); border-right-color: var(--accent-2); }
       @keyframes spin { to { transform: rotate(360deg); } }
       .splash-word {
-        position: absolute; margin-top: 128px;
-        font-weight: 800; letter-spacing: 6px; font-size: 15px; color: var(--ink-2);
-        opacity: 0; animation: fadeUp 0.9s ease 0.4s forwards;
+        position: absolute; margin-top: 128px; font-weight: 800; letter-spacing: 6px;
+        font-size: 15px; color: var(--ink-2); opacity: 0; animation: fadeUp 0.9s ease 0.4s forwards;
       }
       @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 0.9; transform: none; } }
 
       /* ── Top bar ── */
       .topbar {
-        position: relative; z-index: 10;
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 22px 22px 0;
+        position: relative; z-index: 10; display: flex; align-items: center;
+        justify-content: space-between; padding: 22px 22px 0;
       }
       .brand { font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
       .brand b { color: var(--accent); }
       .top-actions { display: flex; gap: 8px; }
       .icon-btn {
-        width: 42px; height: 42px; border-radius: 13px;
+        width: 42px; height: 42px; border-radius: var(--radius-xs);
         background: var(--surface); border: 1px solid var(--line);
-        display: grid; place-items: center; color: var(--ink-2);
-        cursor: pointer; transition: transform 0.15s, border-color 0.2s, color 0.2s;
+        display: grid; place-items: center; color: var(--ink-2); cursor: pointer;
+        transition: transform 0.15s, border-color 0.2s, color 0.2s, background 0.3s;
+        position: relative;
       }
       .icon-btn:active { transform: scale(0.92); }
       .icon-btn svg { width: 19px; height: 19px; }
+      /* A dot only when there is genuinely something new to install. */
+      .icon-btn .dot {
+        position: absolute; top: 7px; right: 7px; width: 8px; height: 8px;
+        border-radius: 50%; background: var(--accent); border: 2px solid var(--surface);
+        display: none;
+      }
+      .icon-btn.has-update .dot { display: block; }
 
-      /* ── Main area ── */
-      .stage { position: relative; z-index: 10; flex: 1; display: flex; flex-direction: column; }
+      .stage { position: relative; z-index: 10; flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
-      /* The centred search zone. It starts vertically centred and lifts up when a
-         link is recognised — driven by justify-content on this flex column. */
       .search-zone {
         flex: 1; display: flex; flex-direction: column; align-items: center;
-        justify-content: center; gap: 16px; padding: 0 22px;
-        transition: justify-content 0.6s cubic-bezier(0.22,1,0.36,1);
+        justify-content: center; gap: 16px; padding: 0 22px; min-height: 0;
       }
-      .phone[data-mode="preview"] .search-zone { justify-content: flex-start; padding-top: 20px; }
+      .phone[data-mode="preview"] .search-zone { justify-content: flex-start; padding-top: 18px; }
 
-      .search-wrap { width: 100%; max-width: 340px; transition: max-width 0.6s cubic-bezier(0.22,1,0.36,1); }
+      .search-wrap { width: 100%; max-width: 340px; transition: max-width 0.6s cubic-bezier(0.22,1,0.36,1); flex-shrink: 0; }
       .phone[data-mode="preview"] .search-wrap { max-width: 300px; }
-
       .search {
-        display: flex; align-items: center; gap: 12px;
-        background: var(--surface); border: 1.5px solid var(--line);
-        border-radius: 16px; padding: 0 16px; height: 58px;
-        transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s, height 0.4s;
+        display: flex; align-items: center; gap: 12px; background: var(--surface);
+        border: 1.5px solid var(--line); border-radius: var(--radius-sm); padding: 0 16px; height: 58px;
+        transition: border-color 0.3s, box-shadow 0.3s, height 0.4s, background 0.3s;
       }
       .search.focused {
         border-color: var(--accent);
         box-shadow: 0 0 0 4px rgba(var(--particle), 0.14), 0 8px 30px rgba(var(--particle), 0.18);
+        animation: barPop 0.45s cubic-bezier(0.22,1,0.36,1);
       }
+      @keyframes barPop { 0% { transform: scale(0.97); } 60% { transform: scale(1.015); } 100% { transform: scale(1); } }
       .phone[data-mode="preview"] .search { height: 50px; }
       .search svg.mag { width: 20px; height: 20px; color: var(--ink-3); flex-shrink: 0; transition: color 0.3s; }
       .search.focused svg.mag { color: var(--accent); }
-      .search input {
-        flex: 1; background: none; border: none; outline: none;
-        color: var(--ink); font-size: 15.5px; font-family: inherit;
-      }
+      .search input { flex: 1; background: none; border: none; outline: none; color: var(--ink); font-size: 15.5px; font-family: inherit; min-width: 0; }
       .search input::placeholder { color: var(--ink-3); }
-      .search .clear { color: var(--ink-3); cursor: pointer; display: none; }
+      /* Needs its own size: an inline SVG with no width/height stretches to fill
+         the flex line, which drew the clear icon across the whole screen. */
+      .search .clear { width: 18px; height: 18px; color: var(--ink-3); cursor: pointer; display: none; flex-shrink: 0; }
       .search input:not(:placeholder-shown) ~ .clear { display: block; }
 
-      /* Paste sits under the bar and hides once the user is typing a link. */
       .paste {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: var(--surface-2); border: 1px solid var(--line);
-        color: var(--ink-2); font-weight: 600; font-size: 14px;
-        padding: 12px 22px; border-radius: 13px; cursor: pointer;
-        transition: opacity 0.3s, transform 0.3s, background 0.2s;
+        display: inline-flex; align-items: center; gap: 8px; background: var(--surface-2);
+        border: 1px solid var(--line); color: var(--ink-2); font-weight: 600; font-size: 14px;
+        padding: 12px 22px; border-radius: var(--radius-xs); cursor: pointer;
+        transition: opacity 0.3s, transform 0.3s, background 0.2s; flex-shrink: 0;
       }
       .paste:active { transform: scale(0.95); }
       .paste svg { width: 16px; height: 16px; }
-      .paste.hidden { opacity: 0; transform: translateY(-6px); pointer-events: none; }
-
-      .hint { color: var(--ink-3); font-size: 12.5px; letter-spacing: 0.3px; }
+      .paste.hidden { opacity: 0; transform: translateY(-6px); pointer-events: none; position: absolute; }
+      .hint { color: var(--ink-3); font-size: 12.5px; letter-spacing: 0.3px; flex-shrink: 0; }
       .paste.hidden ~ .hint { display: none; }
 
-      /* ── Source preview ── */
-      .preview {
-        width: 100%; max-width: 340px; margin: 20px auto 0;
-        opacity: 0; transform: translateY(16px); pointer-events: none;
-        transition: opacity 0.5s ease 0.15s, transform 0.5s cubic-bezier(0.22,1,0.36,1) 0.15s;
+      /* Reading state — the beat between paste and result, so the app never
+         looks frozen while the link is being resolved. */
+      .reading { display: none; align-items: center; gap: 10px; color: var(--ink-2); font-size: 13px; }
+      .phone[data-mode="reading"] .reading { display: flex; }
+      .phone[data-mode="reading"] .paste, .phone[data-mode="reading"] .hint { display: none; }
+      .spinner {
+        width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line);
+        border-top-color: var(--accent); animation: spin 0.7s linear infinite;
       }
-      .phone[data-mode="preview"] .preview { opacity: 1; transform: none; pointer-events: auto; }
-      .preview-card {
-        background: var(--surface); border: 1px solid var(--line);
-        border-radius: var(--radius); overflow: hidden;
+
+      /* ── Result card ── */
+      .result {
+        width: 100%; max-width: 340px; margin: 16px auto 0; opacity: 0;
+        transform: translateY(16px); pointer-events: none; overflow-y: auto; min-height: 0;
+        transition: opacity 0.45s ease 0.05s, transform 0.5s cubic-bezier(0.22,1,0.36,1) 0.05s;
+        scrollbar-width: none;
       }
-      .thumb {
-        height: 158px; background: linear-gradient(135deg, var(--surface-2), var(--surface));
-        position: relative; display: grid; place-items: center;
+      .result::-webkit-scrollbar { display: none; }
+      .phone[data-mode="preview"] .result { opacity: 1; transform: none; pointer-events: auto; }
+      .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+
+      .thumb { height: 168px; position: relative; display: grid; place-items: center; overflow: hidden; }
+      .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .thumb .chip {
+        position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.6); color: #fff;
+        font-size: 11px; font-weight: 700; letter-spacing: 0.6px; padding: 5px 11px;
+        border-radius: 999px; text-transform: uppercase; backdrop-filter: blur(6px);
       }
-      .thumb .platform {
-        position: absolute; top: 12px; left: 12px;
-        background: rgba(0,0,0,0.55); color: #fff; backdrop-filter: blur(6px);
-        font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
-        padding: 5px 11px; border-radius: 999px; text-transform: uppercase;
+      .thumb .dur {
+        position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.7); color: #fff;
+        font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px;
       }
-      .thumb .badge18 {
-        position: absolute; top: 12px; right: 12px;
-        background: #ef5b6b; color: #fff; font-size: 10.5px; font-weight: 800;
-        padding: 5px 9px; border-radius: 8px; display: none;
+      .thumb .kindmark {
+        position: absolute; bottom: 12px; left: 12px; background: rgba(0,0,0,0.6); color: #fff;
+        font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 6px;
+        display: inline-flex; align-items: center; gap: 5px; backdrop-filter: blur(6px);
       }
-      .thumb.age .badge18 { display: block; }
-      .thumb .glyph { width: 46px; height: 46px; color: var(--ink-3); }
-      .thumb.nodl { opacity: 0.82; }
-      .meta { padding: 15px 16px 6px; }
-      .meta .title { font-weight: 700; font-size: 15px; line-height: 1.3; }
+      .thumb .kindmark svg { width: 12px; height: 12px; }
+      .thumb.locked { filter: grayscale(0.7); opacity: 0.75; }
+
+      .meta { padding: 15px 16px 4px; }
+      .meta .title { font-weight: 700; font-size: 15px; line-height: 1.32; }
       .meta .sub { color: var(--ink-3); font-size: 12.5px; margin-top: 4px; }
-      .methods { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 16px; }
+
+      /* ── Photo picker: a checkbox per image, so a 3-photo carousel can be
+         saved whole or in part. Defaults to all selected — the common case is
+         "save the post", not "save one". ── */
+      .picker { padding: 14px 16px 4px; }
+      .picker-head { display: flex; align-items: center; margin-bottom: 10px; }
+      .picker-head .t { font-size: 12px; font-weight: 700; letter-spacing: 0.8px; color: var(--ink-3); text-transform: uppercase; flex: 1; }
+      .picker-head .all { font-size: 12px; font-weight: 600; color: var(--accent); cursor: pointer; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .cell {
+        position: relative; aspect-ratio: 1; border-radius: var(--radius-xs); overflow: hidden;
+        cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s, transform 0.15s;
+      }
+      .cell:active { transform: scale(0.96); }
+      .cell img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.2s, filter 0.2s; }
+      .cell.on { border-color: var(--accent); }
+      .cell:not(.on) img { opacity: 0.5; filter: grayscale(0.5); }
+      .cell .check {
+        position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; border-radius: 50%;
+        background: rgba(0,0,0,0.45); border: 1.5px solid rgba(255,255,255,0.7);
+        display: grid; place-items: center; transition: background 0.2s, border-color 0.2s, transform 0.2s;
+      }
+      .cell .check svg { width: 12px; height: 12px; color: #fff; opacity: 0; transition: opacity 0.2s; }
+      .cell.on .check { background: var(--accent); border-color: var(--accent); transform: scale(1.05); }
+      .cell.on .check svg { opacity: 1; }
+      .cell .idx {
+        position: absolute; bottom: 5px; left: 6px; font-size: 10.5px; font-weight: 700;
+        color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      }
+
+      /* ── Save options — only the ones this content actually supports ── */
+      .methods { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px 16px; }
       .method {
-        display: flex; align-items: center; gap: 12px;
-        background: var(--surface-2); border: 1px solid var(--line);
-        border-radius: var(--radius-sm); padding: 13px 15px; cursor: pointer;
-        transition: transform 0.15s, border-color 0.2s;
+        display: flex; align-items: center; gap: 12px; background: var(--surface-2);
+        border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 13px 15px;
+        cursor: pointer; transition: transform 0.15s, border-color 0.2s, background 0.2s;
       }
       .method:active { transform: scale(0.98); }
       .method.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
       .method .m-ic { width: 20px; height: 20px; flex-shrink: 0; }
-      .method .m-main { flex: 1; }
+      .method .m-main { flex: 1; min-width: 0; }
       .method .m-t { font-weight: 700; font-size: 14px; }
-      .method .m-s { font-size: 12px; opacity: 0.75; margin-top: 1px; }
-      .method .dl { width: 18px; height: 18px; opacity: 0.8; }
+      .method .m-s { font-size: 11.5px; opacity: 0.78; margin-top: 2px; }
+      .method .dl { width: 18px; height: 18px; opacity: 0.85; flex-shrink: 0; }
       .note-row {
-        display: flex; align-items: center; gap: 11px;
-        background: var(--surface-2); border: 1px dashed var(--line);
-        border-radius: var(--radius-sm); padding: 13px 15px;
-        color: var(--ink-2); font-size: 12.5px; line-height: 1.4;
+        display: flex; align-items: flex-start; gap: 11px; background: var(--surface-2);
+        border: 1px dashed var(--line); border-radius: var(--radius-sm); padding: 13px 15px;
+        color: var(--ink-2); font-size: 12.5px; line-height: 1.45;
       }
-      .note-row svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--ink-3); }
+      .note-row svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--ink-3); margin-top: 1px; }
 
-      /* ── History screen ── */
-      .history {
-        position: absolute; inset: 0; z-index: 20;
-        background: var(--bg); transform: translateX(100%);
-        transition: transform 0.5s cubic-bezier(0.22,1,0.36,1);
-        display: flex; flex-direction: column;
-      }
-      .history.open { transform: none; }
-      .history .h-top { display: flex; align-items: center; gap: 14px; padding: 22px 22px 8px; }
-      .history .h-top .title { font-weight: 800; font-size: 20px; }
-      .h-list { flex: 1; overflow-y: auto; padding: 10px 18px 20px; display: flex; flex-direction: column; gap: 10px; }
-      .h-item {
-        display: flex; align-items: center; gap: 13px;
-        background: var(--surface); border: 1px solid var(--line);
-        border-radius: var(--radius-sm); padding: 13px 15px;
-      }
-      .h-item .h-thumb { width: 46px; height: 46px; border-radius: 11px; background: var(--surface-2); flex-shrink: 0; display:grid; place-items:center; }
-      .h-item .h-thumb svg { width: 20px; height: 20px; color: var(--ink-3); }
-      .h-item .h-main { flex: 1; min-width: 0; }
-      .h-item .h-t { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .h-item .h-s { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
-      .h-item .h-plat { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; }
-
-      /* ── Theme sheet ── */
+      /* ── Download progress sheet ── */
       .scrim {
-        position: absolute; inset: 0; z-index: 30; background: rgba(0,0,0,0.5);
+        position: absolute; inset: 0; z-index: 30; background: rgba(0,0,0,0.55);
         opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s;
       }
       .scrim.open { opacity: 1; visibility: visible; }
       .sheet {
-        position: absolute; left: 0; right: 0; bottom: 0; z-index: 31;
-        background: var(--bg-2); border-top-left-radius: 26px; border-top-right-radius: 26px;
-        border-top: 1px solid var(--line);
-        transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.22,1,0.36,1);
-        padding: 12px 20px 30px;
+        position: absolute; left: 0; right: 0; bottom: 0; z-index: 31; background: var(--bg-2);
+        border-top-left-radius: 26px; border-top-right-radius: 26px; border-top: 1px solid var(--line);
+        transform: translateY(100%); transition: transform 0.45s cubic-bezier(0.22,1,0.36,1);
+        padding: 12px 20px 30px; max-height: 88%; overflow-y: auto;
       }
       .sheet.open { transform: none; }
       .grip { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 16px; }
       .sheet h3 { font-size: 16px; margin-bottom: 4px; }
-      .sheet p { font-size: 12.5px; color: var(--ink-3); margin-bottom: 16px; }
-      .themes { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+      .sheet p.sub { font-size: 12.5px; color: var(--ink-3); margin-bottom: 16px; line-height: 1.5; }
+
+      .dl-head { display: flex; gap: 13px; align-items: center; margin-bottom: 18px; }
+      .dl-thumb { width: 54px; height: 54px; border-radius: var(--radius-xs); overflow: hidden; flex-shrink: 0; background: var(--surface-2); }
+      .dl-thumb img { width: 100%; height: 100%; object-fit: cover; }
+      .dl-head .t { font-weight: 700; font-size: 14.5px; line-height: 1.3; }
+      .dl-head .s { color: var(--ink-3); font-size: 12px; margin-top: 3px; }
+
+      /* The ring is the hero of this sheet: a stroke-dashoffset arc, which
+         animates on the compositor and reads instantly at a glance. */
+      .ring-wrap { display: grid; place-items: center; margin: 6px 0 18px; position: relative; }
+      .ring-svg { width: 132px; height: 132px; transform: rotate(-90deg); }
+      .ring-svg circle { fill: none; stroke-width: 9; stroke-linecap: round; }
+      .ring-track { stroke: var(--surface-2); }
+      .ring-fill { stroke: var(--accent); transition: stroke-dashoffset 0.35s cubic-bezier(0.4,0,0.2,1), stroke 0.3s; }
+      .ring-label {
+        position: absolute; text-align: center;
+      }
+      .ring-label .pct { font-size: 27px; font-weight: 800; letter-spacing: -1px; }
+      .ring-label .st { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+      .ring-wrap.done .ring-fill { stroke: var(--ok); }
+      .ring-wrap.done .tick { animation: pop 0.5s cubic-bezier(0.22,1,0.36,1); }
+      @keyframes pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+      .tick { width: 46px; height: 46px; color: var(--ok); }
+
+      /* Per-item rows, so a 3-photo save shows 3 lines finishing one by one. */
+      .dl-items { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+      .dl-item { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--ink-2); }
+      .dl-item .st-ic { width: 17px; height: 17px; flex-shrink: 0; color: var(--ink-3); }
+      .dl-item.active .st-ic { color: var(--accent); }
+      .dl-item.done .st-ic { color: var(--ok); }
+      .dl-item .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .dl-item .sz { color: var(--ink-3); font-size: 11.5px; }
+      .dl-item .mini { width: 44px; height: 3px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+      .dl-item .mini i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 2px; transition: width 0.3s linear; }
+
+      .btn {
+        display: block; width: 100%; text-align: center; padding: 14px; border-radius: var(--radius-sm);
+        font-weight: 700; font-size: 14px; cursor: pointer; border: 1px solid var(--line);
+        background: var(--surface-2); color: var(--ink); transition: transform 0.15s, background 0.2s;
+      }
+      .btn:active { transform: scale(0.98); }
+      .btn.accent { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+      .btn.danger { color: var(--warn); border-color: var(--warn); background: transparent; }
+
+      /* ── History ── */
+      .screen {
+        position: absolute; inset: 0; z-index: 20; background: var(--bg);
+        transform: translateX(100%); transition: transform 0.45s cubic-bezier(0.22,1,0.36,1);
+        display: flex; flex-direction: column;
+      }
+      .screen.open { transform: none; }
+      .screen .h-top { display: flex; align-items: center; gap: 14px; padding: 22px 22px 8px; }
+      .screen .h-top .title { font-weight: 800; font-size: 20px; flex: 1; }
+      .h-list { flex: 1; overflow-y: auto; padding: 10px 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+      .h-item {
+        display: flex; align-items: center; gap: 12px; background: var(--surface);
+        border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 11px 13px;
+        animation: rise 0.4s cubic-bezier(0.22,1,0.36,1) backwards;
+      }
+      @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+      .h-item .h-thumb { width: 46px; height: 46px; border-radius: var(--radius-xs); overflow: hidden; flex-shrink: 0; background: var(--surface-2); }
+      .h-item .h-thumb img { width: 100%; height: 100%; object-fit: cover; }
+      .h-item .h-main { flex: 1; min-width: 0; }
+      .h-item .h-t { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .h-item .h-s { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+      .h-item .h-plat { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }
+      .empty { text-align: center; color: var(--ink-3); font-size: 13px; padding: 70px 24px; line-height: 1.6; }
+
+      /* ── Settings ── */
+      .set-group { margin-bottom: 20px; }
+      .set-label { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; color: var(--ink-3); text-transform: uppercase; margin-bottom: 10px; }
+      .toggle-row {
+        display: flex; align-items: center; gap: 13px; background: var(--surface);
+        border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 13px 15px;
+        margin-bottom: 8px; cursor: pointer;
+      }
+      .toggle-row .tr-main { flex: 1; min-width: 0; }
+      .toggle-row .tr-t { font-weight: 600; font-size: 13.5px; }
+      .toggle-row .tr-s { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; line-height: 1.45; }
+      .sw {
+        width: 44px; height: 26px; border-radius: 13px; background: var(--surface-2);
+        border: 1px solid var(--line); position: relative; flex-shrink: 0; transition: background 0.25s, border-color 0.25s;
+      }
+      .sw i {
+        position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+        background: var(--ink-3); transition: transform 0.28s cubic-bezier(0.22,1,0.36,1), background 0.25s;
+      }
+      .toggle-row.on .sw { background: var(--accent); border-color: var(--accent); }
+      .toggle-row.on .sw i { transform: translateX(18px); background: var(--on-accent); }
+
+      .themes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
       .theme-opt {
-        display: flex; align-items: center; gap: 11px;
-        border: 1.5px solid var(--line); border-radius: var(--radius-sm);
-        padding: 13px 14px; cursor: pointer; transition: border-color 0.2s;
+        display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--line);
+        border-radius: var(--radius-sm); padding: 12px 13px; cursor: pointer; transition: border-color 0.2s;
       }
       .theme-opt.active { border-color: var(--accent); }
-      .swatch { width: 30px; height: 30px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
-      .theme-opt .t-name { font-weight: 600; font-size: 13.5px; }
-      .theme-opt .check { margin-left: auto; color: var(--accent); opacity: 0; }
+      .swatch { width: 28px; height: 28px; border-radius: 9px; border: 1px solid rgba(128,128,128,0.25); flex-shrink: 0; }
+      .theme-opt .t-name { font-weight: 600; font-size: 12.5px; line-height: 1.25; }
+      .theme-opt .check { width: 17px; height: 17px; margin-left: auto; color: var(--accent); opacity: 0; flex-shrink: 0; }
       .theme-opt.active .check { opacity: 1; }
 
-      /* Small helper so the search-animation ref is visibly honoured: the bar
-         width springs in on focus. */
-      @keyframes barPop { 0% { transform: scale(0.97); } 60% { transform: scale(1.015); } 100% { transform: scale(1); } }
-      .search.focused { animation: barPop 0.45s cubic-bezier(0.22,1,0.36,1); }
+      .ver-row {
+        display: flex; align-items: center; gap: 12px; background: var(--surface);
+        border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 13px 15px;
+      }
+      .ver-row .v-main { flex: 1; }
+      .ver-row .v-t { font-weight: 600; font-size: 13.5px; }
+      .ver-row .v-s { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
+      .ver-row .v-act { font-size: 12.5px; font-weight: 700; color: var(--accent); cursor: pointer; }
+      .ver-row .v-act.idle { color: var(--ink-3); cursor: default; }
+
+      .toast {
+        position: absolute; left: 20px; right: 20px; bottom: 24px; z-index: 50;
+        background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm);
+        padding: 13px 16px; font-size: 13px; color: var(--ink);
+        display: flex; align-items: center; gap: 10px;
+        transform: translateY(120%); opacity: 0; transition: transform 0.45s cubic-bezier(0.22,1,0.36,1), opacity 0.3s;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+      }
+      .toast.show { transform: none; opacity: 1; }
+      .toast svg { width: 18px; height: 18px; color: var(--ok); flex-shrink: 0; }
     </style>
   </head>
   <body>
     <div class="phone" id="phone" data-theme="dark" data-mode="idle">
       <canvas id="waves"></canvas>
 
-      <!-- Splash -->
       <div class="splash" id="splash">
         <div class="splash-mark"><div class="ring outer"></div><div class="ring inner"></div></div>
         <div class="splash-word">VORTEX</div>
       </div>
 
-      <!-- Top bar -->
       <div class="topbar">
         <div class="brand">Vor<b>tex</b></div>
         <div class="top-actions">
           <div class="icon-btn" id="historyBtn" title="History" aria-label="History">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 3"/></svg>
           </div>
-          <div class="icon-btn" id="gearBtn" title="Themes" aria-label="Settings">
+          <div class="icon-btn" id="gearBtn" title="Settings" aria-label="Settings">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span class="dot"></span>
           </div>
         </div>
       </div>
 
-      <!-- Main -->
       <div class="stage">
         <div class="search-zone">
           <div class="search-wrap">
@@ -344,49 +438,109 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
             Paste link
           </button>
+          <div class="reading"><span class="spinner"></span><span id="readingText">Reading the link…</span></div>
           <div class="hint">on-device · no account · no watermark</div>
-
-          <!-- Source preview -->
-          <div class="preview" id="preview">
-            <div class="preview-card">
-              <div class="thumb" id="thumb">
-                <span class="platform" id="platform">Media</span>
-                <span class="badge18">18+ verified</span>
-                <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m10 8 6 4-6 4V8Z"/><rect x="2" y="3" width="20" height="18" rx="3"/></svg>
-              </div>
-              <div class="meta">
-                <div class="title" id="pvTitle">Detecting source…</div>
-                <div class="sub" id="pvSub">Reading the link on-device</div>
-              </div>
-              <div class="methods" id="methods"></div>
-            </div>
-          </div>
+          <div class="result" id="result"></div>
         </div>
       </div>
 
-      <!-- History screen -->
-      <div class="history" id="history">
+      <!-- History -->
+      <div class="screen" id="history">
         <div class="h-top">
           <div class="icon-btn" id="backBtn" aria-label="Back">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
           </div>
           <div class="title">History</div>
+          <div class="icon-btn" id="clearHistBtn" aria-label="Delete history" title="Delete history">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </div>
         </div>
         <div class="h-list" id="hList"></div>
       </div>
 
-      <!-- Theme sheet -->
       <div class="scrim" id="scrim"></div>
-      <div class="sheet" id="sheet">
+
+      <!-- Download progress -->
+      <div class="sheet" id="dlSheet">
         <div class="grip"></div>
-        <h3>Theme</h3>
-        <p>Pick how Vortex looks. The particle background adapts to each.</p>
-        <div class="themes" id="themeGrid">
-          <div class="theme-opt" data-t="dark"><span class="swatch" style="background:#0e0f17"></span><span class="t-name">Dark</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
-          <div class="theme-opt" data-t="amoled"><span class="swatch" style="background:#000"></span><span class="t-name">AMOLED</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
-          <div class="theme-opt" data-t="light"><span class="swatch" style="background:#f4f4fb"></span><span class="t-name">Light</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
-          <div class="theme-opt" data-t="materialu"><span class="swatch" style="background:linear-gradient(135deg,#6750a4,#f7f2fa)"></span><span class="t-name">Material U</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
+        <div class="dl-head">
+          <div class="dl-thumb"><img id="dlThumb" alt="" /></div>
+          <div>
+            <div class="t" id="dlTitle">—</div>
+            <div class="s" id="dlSub">—</div>
+          </div>
         </div>
+        <div class="ring-wrap" id="ringWrap">
+          <svg class="ring-svg" viewBox="0 0 120 120">
+            <circle class="ring-track" cx="60" cy="60" r="52"></circle>
+            <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+          </svg>
+          <div class="ring-label" id="ringLabel">
+            <div class="pct" id="dlPct">0%</div>
+            <div class="st" id="dlState">Starting…</div>
+          </div>
+        </div>
+        <div class="dl-items" id="dlItems"></div>
+        <div class="btn" id="dlAction">Cancel</div>
+      </div>
+
+      <!-- Settings -->
+      <div class="sheet" id="setSheet">
+        <div class="grip"></div>
+        <h3>Settings</h3>
+        <p class="sub">Everything runs on the device. Nothing here leaves the phone.</p>
+
+        <div class="set-group">
+          <div class="set-label">Appearance</div>
+          <div class="themes" id="themeGrid">
+            <div class="theme-opt" data-t="dark"><span class="swatch" style="background:#0e0f17"></span><span class="t-name">Dark</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
+            <div class="theme-opt" data-t="amoled"><span class="swatch" style="background:#000"></span><span class="t-name">AMOLED</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
+            <div class="theme-opt" data-t="light"><span class="swatch" style="background:#f4f4fb"></span><span class="t-name">Light</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
+            <div class="theme-opt" data-t="mu-light"><span class="swatch" style="background:linear-gradient(135deg,#6750a4,#f7f2fa)"></span><span class="t-name">Material You<br>Light</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
+            <div class="theme-opt" data-t="mu-dark"><span class="swatch" style="background:linear-gradient(135deg,#d0bcff,#141218)"></span><span class="t-name">Material You<br>Dark</span><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg></div>
+          </div>
+        </div>
+
+        <div class="set-group">
+          <div class="set-label">Downloads</div>
+          <div class="toggle-row on" id="tgThumb">
+            <div class="tr-main">
+              <div class="tr-t">Save with thumbnail</div>
+              <div class="tr-s">Embeds the source artwork in the file, so audio shows a cover instead of a blank tile in your gallery.</div>
+            </div>
+            <div class="sw"><i></i></div>
+          </div>
+        </div>
+
+        <div class="set-group">
+          <div class="set-label">Updates</div>
+          <div class="toggle-row on" id="tgEngine">
+            <div class="tr-main">
+              <div class="tr-t">Auto-update recognition system</div>
+              <div class="tr-s">Sites change how they serve media. Keeping the extractor current is what stops links quietly breaking.</div>
+            </div>
+            <div class="sw"><i></i></div>
+          </div>
+          <div class="toggle-row" id="tgApp">
+            <div class="tr-main">
+              <div class="tr-t">Check for app updates</div>
+              <div class="tr-s">Only tells you when a newer version actually exists.</div>
+            </div>
+            <div class="sw"><i></i></div>
+          </div>
+          <div class="ver-row" style="margin-top:8px">
+            <div class="v-main">
+              <div class="v-t">Vortex <span id="appVer">4.0.0</span></div>
+              <div class="v-s" id="verState">Recognition engine up to date</div>
+            </div>
+            <div class="v-act idle" id="verAct">Check</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="toast" id="toast">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg>
+        <span id="toastText">Saved</span>
       </div>
     </div>
 
@@ -394,12 +548,9 @@
       const $ = (id) => document.getElementById(id);
       const phone = $("phone");
 
-      // ── Splash ──
-      setTimeout(() => $("splash").classList.add("gone"), 1500);
+      setTimeout(() => $("splash").classList.add("gone"), 1400);
 
       // ── Particle-wave background ──
-      // A slow, minimal field of drifting dots joined by faint lines — reads well
-      // on both dark and light grounds because it draws with the theme's accent.
       const canvas = $("waves"), ctx = canvas.getContext("2d");
       let W, H, dots = [];
       function resize() {
@@ -407,7 +558,7 @@
         W = canvas.width = r.width * devicePixelRatio;
         H = canvas.height = r.height * devicePixelRatio;
         canvas.style.width = r.width + "px"; canvas.style.height = r.height + "px";
-        const count = Math.round((r.width * r.height) / 14000);
+        const count = Math.round((r.width * r.height) / 15000);
         dots = Array.from({ length: count }, () => ({
           x: Math.random() * W, y: Math.random() * H,
           vx: (Math.random() - 0.5) * 0.12 * devicePixelRatio,
@@ -423,20 +574,19 @@
           if (d.x < 0 || d.x > W) d.vx *= -1;
           if (d.y < 0 || d.y > H) d.vy *= -1;
         }
-        // Links
         for (let i = 0; i < dots.length; i++) {
           for (let j = i + 1; j < dots.length; j++) {
             const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
-            const dist = Math.hypot(dx, dy), max = 120 * devicePixelRatio;
+            const dist = Math.hypot(dx, dy), max = 118 * devicePixelRatio;
             if (dist < max) {
-              ctx.strokeStyle = `rgba(${c}, ${(1 - dist / max) * 0.12})`;
+              ctx.strokeStyle = `rgba(${c}, ${(1 - dist / max) * 0.11})`;
               ctx.lineWidth = devicePixelRatio * 0.6;
               ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke();
             }
           }
         }
         for (const d of dots) {
-          ctx.fillStyle = `rgba(${c}, 0.5)`;
+          ctx.fillStyle = `rgba(${c}, 0.45)`;
           ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 7); ctx.fill();
         }
         requestAnimationFrame(tick);
@@ -444,19 +594,13 @@
       resize(); tick();
       window.addEventListener("resize", resize);
 
-      // ── Search focus animation ──
-      const search = $("search"), input = $("input"), paste = $("pasteBtn");
-      input.addEventListener("focus", () => search.classList.add("focused"));
-      input.addEventListener("blur", () => { if (!input.value) search.classList.remove("focused"); });
-      $("clear").addEventListener("click", () => { input.value = ""; input.dispatchEvent(new Event("input")); input.focus(); });
-
       // ── URL normalization ──
-      // Real pastes are messy: no scheme, stray whitespace, zero-width chars
-      // copied from chat apps, tracking params. Resolve to a real URL object
-      // (not a whole-string regex — that's how "https://evil.com/?u=youtube.com"
-      // used to false-match YouTube) or return null.
+      // Real pastes are messy: no scheme, whitespace, zero-width characters from
+      // chat apps, and long tracking tails. Resolve to a real URL object — not a
+      // whole-string regex, which is how "evil.com/?u=youtube.com" used to
+      // false-match YouTube — or return null.
+      const ZW_RE = new RegExp("[" + String.fromCharCode(8203) + "-" + String.fromCharCode(8205) + String.fromCharCode(65279) + "]", "g");
       function normalizeUrl(raw) {
-        const ZW_RE = new RegExp("[" + String.fromCharCode(8203) + "-" + String.fromCharCode(8205) + String.fromCharCode(65279) + "]", "g");
         let t = (raw || "").trim().replace(ZW_RE, "");
         if (!t) return null;
         if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(t)) {
@@ -471,331 +615,665 @@
       const bareHost = (u) => u.hostname.replace(/^(www|m|mobile|web)\./, "");
       const segs = (u) => u.pathname.split("/").filter(Boolean);
       const looksLikeLink = (t) => !!normalizeUrl(t);
-
-      // ── Method-set + result shapes ──
-      const METHOD_SETS = {
-        video: (q = "1080p") => [[`Video · ${q}`, "MP4 · no watermark", true], ["Audio only", "MP3 · 320 kbps", false]],
-        videoOnly: (q = "best") => [[`Video · ${q}`, "MP4", true]],
-        audio: (q = "320 kbps") => [["Audio", `MP3 · ${q} + tags`, true]],
-        auto: () => [["Best quality", "Photo or video, auto-detected", true], ["Audio only", "If the post has video", false]],
-        imageSet: () => [["Photos", "Original quality, ZIP if multiple", true], ["Audio", "Background track, if any", false]],
-        direct: () => [["Direct file", "Original quality, as hosted", true]],
+      const intParam = (u, k) => {
+        const v = parseInt(u.searchParams.get(k) || "", 10);
+        return Number.isFinite(v) ? v : null;
       };
-      const media = (type, title, sub, methods, opts = {}) =>
-        ({ downloadable: true, type, title, sub, methods, glyph: type, ...opts });
-      const unsupported = (title, note) =>
-        ({ downloadable: false, type: "unsupported", title, sub: "No downloadable media here", note, methods: [], glyph: "locked" });
+
+      // ── Placeholder artwork ──
+      // The shipped app embeds the real thumbnail the extractor returns. The
+      // preview has no network, so it draws a deterministic gradient from the
+      // link's own characters: stable per link, distinct between links, and
+      // never an empty grey box — which is exactly the failure the "save with
+      // thumbnail" setting exists to prevent.
+      function artFor(seed, i = 0, kind = "video") {
+        let h = 0;
+        const s = seed + "#" + i;
+        for (let k = 0; k < s.length; k++) h = (h * 31 + s.charCodeAt(k)) >>> 0;
+        const a = h % 360, b = (a + 40 + (h >> 8) % 80) % 360;
+        const glyph = kind === "audio"
+          ? '<circle cx="100" cy="100" r="26" fill="rgba(255,255,255,.28)"/><circle cx="100" cy="100" r="9" fill="rgba(0,0,0,.35)"/>'
+          : kind === "image"
+          ? '<circle cx="78" cy="80" r="15" fill="rgba(255,255,255,.32)"/><path d="M46 132 84 96l24 22 20-16 30 30z" fill="rgba(255,255,255,.26)"/>'
+          : '<path d="M86 74l46 26-46 26z" fill="rgba(255,255,255,.35)"/>';
+        const svg =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">' +
+          '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+          `<stop offset="0" stop-color="hsl(${a},58%,42%)"/><stop offset="1" stop-color="hsl(${b},62%,26%)"/>` +
+          '</linearGradient></defs><rect width="200" height="200" fill="url(#g)"/>' +
+          `<circle cx="${40 + (h % 120)}" cy="${30 + ((h >> 4) % 140)}" r="${28 + (h % 40)}" fill="rgba(255,255,255,.08)"/>` +
+          glyph + '</svg>';
+        return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+      }
+
+      // ── Result shapes ──
+      // kind drives everything downstream: which options appear, whether a photo
+      // picker is drawn, and what the save button is called.
+      const OPT = {
+        /* Every save option is "Save <thing>", so the buttons read as one family.
+           The two video qualities carry the resolution in the LABEL rather than
+           only in the detail line — two buttons both reading "Save video" are
+           indistinguishable at a glance, which is the one thing a download
+           button cannot afford to be. */
+        video: (q, size) => ({ id: "video", label: `Save video · ${q}`, detail: `MP4 · ~${size} MB · best quality · no watermark`, icon: "video", primary: true }),
+        videoAlt: (q, size) => ({ id: "video-alt", label: `Save video · ${q}`, detail: `MP4 · ~${size} MB · smaller file`, icon: "video" }),
+        audioFromVideo: () => ({ id: "audio", label: "Save audio", detail: "MP3 · 320 kbps · artwork from source", icon: "audio" }),
+        audio: () => ({ id: "audio", label: "Save audio", detail: "MP3 · 320 kbps · tags + cover art", icon: "audio", primary: true }),
+        photos: (n) => ({ id: "photos", label: n === 1 ? "Save photo" : "Save selected photos", detail: n === 1 ? "JPG · original quality" : `JPG · original quality · ${n} selected`, icon: "image", primary: true }),
+        cover: () => ({ id: "cover", label: "Save cover image", detail: "JPG · thumbnail at full resolution", icon: "image" }),
+      };
+
+      const video = (title, sub, o = {}) => ({
+        kind: "video", downloadable: true, title, sub,
+        duration: o.duration || null, quality: o.quality || "1080p",
+        options: [OPT.video(o.quality || "1080p", o.size || 34), ...(o.alt ? [OPT.videoAlt("720p", Math.round((o.size || 34) * 0.55))] : []), OPT.audioFromVideo(), OPT.cover()],
+      });
+      const photos = (title, sub, count) => ({
+        kind: "photos", downloadable: true, title, sub, count,
+        options: [OPT.photos(count)],
+      });
+      const audio = (title, sub) => ({
+        kind: "audio", downloadable: true, title, sub,
+        options: [OPT.audio(), OPT.cover()],
+      });
+      /* Content that can be either — a shortlink, or a post that may hold a
+         video or a gallery. Honest about the ambiguity instead of guessing. */
+      const unknownMedia = (title, sub) => ({
+        kind: "unknown", downloadable: true, title, sub,
+        options: [{ id: "auto", label: "Save media", detail: "Resolves the link, then saves whatever it holds", icon: "auto", primary: true }, OPT.audioFromVideo()],
+      });
+      const nothing = (title, note) => ({
+        kind: "none", downloadable: false, title, sub: "No downloadable media here", note, options: [],
+      });
 
       // ── Platform recognition ──
-      // Each entry matches on the real hostname, then classifies by path shape
-      // into either a downloadable media type or an honest "not downloadable"
-      // result (profile/community/channel pages, DRM'd catalog links, etc.)
-      // rather than faking a download button for a page with nothing to fetch.
+      // Matched on the real hostname, then classified by the shape of the path
+      // and — where the platform tells us — by its own query parameters. TikTok
+      // photo links carry pic_cnt, and Instagram carousels carry img_index; both
+      // are used, because a guessed image count is a broken picker.
       const PLATFORMS = [
         { name: "TikTok", match: (h) => h === "tiktok.com" || h === "vm.tiktok.com" || h === "vt.tiktok.com",
           classify(u, h, p) {
-            if (h === "vm.tiktok.com" || h === "vt.tiktok.com") return media("video", "TikTok · shared link", "Resolves to video or photo post", METHOD_SETS.video());
-            if (p[1] === "video" && p[2]) return media("video", `${p[0]} · video`, "TikTok · no watermark", METHOD_SETS.video());
-            if (p[1] === "photo" && p[2]) return media("image", `${p[0]} · photo post`, "TikTok slideshow", METHOD_SETS.imageSet());
-            if (p.length === 1 && p[0].startsWith("@")) return unsupported("TikTok profile", "Paste a link to a specific video or photo post instead");
-            return unsupported("TikTok page", "No downloadable media on this page");
+            if (h === "vm.tiktok.com" || h === "vt.tiktok.com")
+              return unknownMedia("TikTok · shared link", "Short link — resolves to a video or a photo post");
+            if (p[1] === "video" && p[2])
+              return video(`${p[0]} · video`, "TikTok · watermark removed", { duration: "0:24", size: 12, alt: true });
+            if (p[1] === "photo" && p[2]) {
+              // pic_cnt is TikTok's own count of images in the post.
+              const n = intParam(u, "pic_cnt") || 1;
+              return photos(`${p[0]} · photo post`, n === 1 ? "TikTok · single image" : `TikTok · ${n} images in this post`, n);
+            }
+            if (p.length === 1 && p[0].startsWith("@")) return nothing("TikTok profile", "Open a specific video or photo post and share that link instead.");
+            return nothing("TikTok page", "This page holds no media that can be saved.");
           } },
         { name: "YouTube", match: (h) => h === "youtube.com" || h === "youtu.be" || h === "music.youtube.com",
           classify(u, h, p) {
             const music = h === "music.youtube.com";
-            if (h === "youtu.be" && p[0]) return media("video", music ? "YouTube Music track" : "YouTube video", "Shared link", music ? METHOD_SETS.audio() : METHOD_SETS.video());
-            if (p[0] === "shorts" && p[1]) return media("video", "YouTube Shorts", "Vertical video", METHOD_SETS.video());
-            if (p[0] === "watch" && u.searchParams.get("v")) return music
-              ? media("audio", "YouTube Music track", "Tagged with cover art", METHOD_SETS.audio())
-              : media("video", "YouTube video", "Standard upload", [["Video · 1080p", "MP4 · H.264", true], ["Video · 720p", "MP4 · smaller", false], ["Audio only", "MP3 · 320 kbps", false]]);
-            if (p[0] === "playlist") return unsupported("YouTube playlist", "Paste a link to an individual video instead");
-            if (p[0] === "channel" || (p[0] || "").startsWith("@")) return unsupported("YouTube channel", "Paste a link to a specific video instead");
-            return unsupported("YouTube", "No downloadable media detected");
+            if (h === "youtu.be" && p[0])
+              return music ? audio("YouTube Music track", "Artist · album · cover art")
+                           : video("YouTube video", "Shared link", { duration: "4:12", size: 38, alt: true });
+            if (p[0] === "shorts" && p[1]) return video("YouTube Shorts", "Vertical video", { duration: "0:38", size: 9, alt: true });
+            if (p[0] === "watch" && u.searchParams.get("v"))
+              return music ? audio("YouTube Music track", "Tagged, with cover art embedded")
+                           : video("YouTube video", "Standard upload", { duration: "4:12", size: 38, alt: true });
+            if (p[0] === "playlist") return nothing("YouTube playlist", "A playlist is a list, not a file. Open one video and share that link.");
+            if (p[0] === "post") return nothing("YouTube community post", "Community posts aren't served as media the extractor can read.");
+            if (p[0] === "channel" || (p[0] || "").startsWith("@")) return nothing("YouTube channel", "Open a specific video and share that link instead.");
+            return nothing("YouTube", "No downloadable media detected on this page.");
           } },
-        { name: "Instagram", match: (h) => h === "instagram.com",
+        { name: "Instagram", match: (h) => h === "instagram.com" || h === "ddinstagram.com",
           classify(u, h, p) {
-            if (p[0] === "p" && p[1]) return media("video", "Instagram post", "Photo or video · quality preserved", METHOD_SETS.auto());
-            if ((p[0] === "reel" || p[0] === "reels") && p[1]) return media("video", "Instagram Reel", "Vertical video", METHOD_SETS.video());
-            if (p[0] === "tv" && p[1]) return media("video", "IGTV video", "Long-form video", METHOD_SETS.video());
-            if (p[0] === "stories" && p[1] && p[2]) return media("image", "Instagram story", `@${p[1]} · expires after 24h`, METHOD_SETS.auto());
-            if (p[0] === "explore") return unsupported("Instagram discovery", "No downloadable media on this page");
-            if (p.length === 1) return unsupported("Instagram profile", "Paste a link to a specific post or reel instead");
-            return unsupported("Instagram", "No downloadable media detected");
-          } },
-        { name: "Facebook", match: (h) => h === "facebook.com" || h === "fb.watch" || h === "fb.me",
-          classify(u, h, p) {
-            if (h === "fb.watch" || h === "fb.me") return media("video", "Facebook video", "Shared link", METHOD_SETS.video());
-            if (u.pathname === "/sharer/sharer.php") return unsupported("Facebook share tool", "This is a share dialog, not a content link — paste the original post link");
-            if (p[0] === "watch") return media("video", "Facebook video", "Watch page", METHOD_SETS.video());
-            if (p[0] === "reel" && p[1]) return media("video", "Facebook Reel", "Vertical video", METHOD_SETS.video());
-            if (p.includes("videos")) return media("video", "Facebook video", "Page video", METHOD_SETS.video());
-            if (p.includes("posts") || u.searchParams.has("story_fbid")) return media("video", "Facebook post", "Photo or video, if attached", METHOD_SETS.auto());
-            if (p[0] === "share") return media("video", "Facebook · shared link", "Resolves on-device", METHOD_SETS.video());
-            if (p[0] === "groups" || p[0] === "events") return unsupported(`Facebook ${p[0] === "groups" ? "group" : "event"}`, "No downloadable media on this page");
-            if (p.length >= 1) return unsupported("Facebook profile or page", "Paste a link to a specific video or post instead");
-            return unsupported("Facebook", "No downloadable media detected");
-          } },
-        { name: "X", match: (h) => h === "x.com" || h === "twitter.com",
-          classify(u, h, p) {
-            if (p[1] === "status" && p[2]) return media("video", "X post", `@${p[0]} · media, if any`, METHOD_SETS.videoOnly());
-            if (p[0] === "i") return unsupported("X system page", "No downloadable media on this page");
-            if (p.length === 1) return unsupported("X / Twitter profile", "Paste a link to a specific post instead");
-            return unsupported("X / Twitter", "No downloadable media detected");
-          } },
-        { name: "Reddit", match: (h) => h === "reddit.com",
-          classify(u, h, p) {
-            if (p[0] === "r" && p[2] === "comments") return media("video", "Reddit post", `r/${p[1]} · video merges audio automatically`, [["Video + audio", "MP4 merged", true], ["Audio only", "MP3", false]], { age: true });
-            if (p[0] === "r" && p[2] === "s") return media("video", "Reddit · shared link", `r/${p[1]}`, METHOD_SETS.video(), { age: true });
-            if (p[0] === "r") return unsupported(`r/${p[1] || ""}`, "This is a community page, not a post");
-            if (p[0] === "user" || p[0] === "u") return unsupported("Reddit profile", "Paste a link to a specific post instead");
-            return unsupported("Reddit", "No downloadable media detected");
-          } },
-        { name: "Pinterest", match: (h) => h === "pinterest.com" || h === "pin.it",
-          classify(u, h, p) {
-            if (h === "pin.it") return media("image", "Pinterest · shared pin", "Resolves on-device", METHOD_SETS.imageSet());
-            if (p[0] === "pin" && p[1]) return media("image", "Pinterest pin", "Photo or video pin", METHOD_SETS.auto());
-            if (p.length >= 2) return unsupported("Pinterest board", "This is a collection, not a single pin");
-            if (p.length === 1) return unsupported("Pinterest profile", "Paste a link to a specific pin instead");
-            return unsupported("Pinterest", "No downloadable media detected");
-          } },
-        { name: "LinkedIn", match: (h) => h === "linkedin.com",
-          classify(u, h, p) {
-            if (p[0] === "posts" || p[0] === "feed") return media("video", "LinkedIn post", "Video, if attached", METHOD_SETS.auto());
-            if (p[0] === "in") return unsupported("LinkedIn profile", "Paste a link to a specific post instead");
-            if (p[0] === "company") return unsupported("LinkedIn company page", "Paste a link to a specific post instead");
-            if (p[0] === "events") return unsupported("LinkedIn event", "Live recordings aren't supported");
-            return unsupported("LinkedIn", "No downloadable media detected");
-          } },
-        { name: "Snapchat", match: (h) => h === "snapchat.com",
-          classify(u, h, p) {
-            if (p[0] === "spotlight" || p[0] === "p") return media("video", "Snapchat Spotlight", "Public share", METHOD_SETS.video());
-            if (p[0] === "add") return unsupported("Snapchat profile link", "This adds a friend — it isn't a content link");
-            if (p[0] === "t") return media("video", "Snapchat · shared link", "Resolves on-device", METHOD_SETS.video());
-            return unsupported("Snapchat", "No downloadable media detected");
-          } },
-        { name: "Discord", match: (h) => ["discord.gg", "discord.com", "cdn.discordapp.com", "media.discordapp.net"].includes(h),
-          classify(u, h, p) {
-            if (h === "cdn.discordapp.com" || h === "media.discordapp.net") return media("video", "Discord attachment", "Direct file link · original quality", METHOD_SETS.direct());
-            if (h === "discord.gg" || p[0] === "invite") return unsupported("Discord invite", "This joins a server — it isn't a content link");
-            if (p[0] === "channels") return unsupported("Discord channel", "Attachments are permission-gated and not publicly downloadable");
-            return unsupported("Discord", "No downloadable media detected");
+            if (p[0] === "p" && p[1]) {
+              // img_index means the sender was looking at slide N of a carousel,
+              // so the post has at least that many images.
+              const idx = intParam(u, "img_index");
+              if (idx && idx > 1) return photos("Instagram carousel", `${idx} images or more in this post`, idx);
+              return unknownMedia("Instagram post", "Photo, video, or a carousel of both");
+            }
+            if ((p[0] === "reel" || p[0] === "reels") && p[1]) return video("Instagram Reel", "Vertical video", { duration: "0:31", size: 11, alt: true });
+            if (p[0] === "tv" && p[1]) return video("IGTV video", "Long-form video", { duration: "6:04", size: 52, alt: true });
+            if (p[0] === "stories" && p[1] && p[2]) return unknownMedia("Instagram story", `@${p[1]} · expires 24h after posting`);
+            if (p[0] === "explore") return nothing("Instagram discovery page", "This is a browse page, not a post.");
+            if (p.length === 1) return nothing("Instagram profile", "Open a specific post or reel and share that link instead.");
+            return nothing("Instagram", "No downloadable media detected.");
           } },
         { name: "Threads", match: (h) => h === "threads.com" || h === "threads.net",
           classify(u, h, p) {
-            if (p[0] === "share" && p[1]) return media("video", "Threads · shared link", "Resolves to the original post", METHOD_SETS.auto());
-            if (p[1] === "post" && p[2]) return media("video", "Threads post", `${p[0]} · media`, METHOD_SETS.auto());
-            if (p.length === 1) return unsupported("Threads profile", "Paste a link to a specific post instead");
-            return unsupported("Threads", "No downloadable media detected");
+            if (p[0] === "share" && p[1]) return unknownMedia("Threads · shared link", "Resolves to the original post and its media");
+            if (p[1] === "post" && p[2]) return unknownMedia("Threads post", `${p[0]} · photo or video`);
+            if (p.length === 1) return nothing("Threads profile", "Open a specific post and share that link instead.");
+            return nothing("Threads", "No downloadable media detected.");
+          } },
+        { name: "Facebook", match: (h) => h === "facebook.com" || h === "fb.watch" || h === "fb.me",
+          classify(u, h, p) {
+            if (h === "fb.watch" || h === "fb.me") return video("Facebook video", "Shared link", { duration: "2:10", size: 22, alt: true });
+            if (u.pathname === "/sharer/sharer.php") return nothing("Facebook share dialog", "This is the share tool itself. Paste the original post link instead.");
+            if (p[0] === "watch") return video("Facebook video", "Watch page", { duration: "2:10", size: 22, alt: true });
+            if (p[0] === "reel" && p[1]) return video("Facebook Reel", "Vertical video", { duration: "0:28", size: 8, alt: true });
+            if (p.includes("videos")) return video("Facebook video", "Page video", { duration: "3:02", size: 27, alt: true });
+            if (p.includes("posts") || u.searchParams.has("story_fbid")) return unknownMedia("Facebook post", "Photo or video, if the post carries one");
+            if (p[0] === "share") return unknownMedia("Facebook · shared link", "Resolves on-device");
+            if (p[0] === "groups" || p[0] === "events") return nothing(`Facebook ${p[0] === "groups" ? "group" : "event"}`, "Open a specific post inside it and share that link.");
+            if (p.length >= 1) return nothing("Facebook profile or page", "Open a specific video or post and share that link instead.");
+            return nothing("Facebook", "No downloadable media detected.");
+          } },
+        { name: "X", match: (h) => h === "x.com" || h === "twitter.com" || h === "fxtwitter.com",
+          classify(u, h, p) {
+            if (p[1] === "status" && p[2]) return unknownMedia("X post", `@${p[0]} · video or images, if attached`);
+            if (p[0] === "i") return nothing("X system page", "This page holds no post media.");
+            if (p.length === 1) return nothing("X profile", "Open a specific post and share that link instead.");
+            return nothing("X", "No downloadable media detected.");
+          } },
+        { name: "Reddit", match: (h) => h === "reddit.com" || h === "redd.it",
+          classify(u, h, p) {
+            if (h === "redd.it") return unknownMedia("Reddit · shared link", "Resolves to the original post");
+            if (p[0] === "r" && p[2] === "comments") return video("Reddit post", `r/${p[1]} · audio merged back in automatically`, { duration: "1:12", size: 14, alt: true });
+            if (p[0] === "r" && p[2] === "s") return unknownMedia("Reddit · shared link", `r/${p[1]}`);
+            if (p[0] === "r") return nothing(`r/${p[1] || ""}`, "This is the community feed, not a post.");
+            if (p[0] === "user" || p[0] === "u") return nothing("Reddit profile", "Open a specific post and share that link instead.");
+            return nothing("Reddit", "No downloadable media detected.");
+          } },
+        { name: "Pinterest", match: (h) => h === "pinterest.com" || h === "pin.it" || /^pinterest\.[a-z.]+$/.test(h),
+          classify(u, h, p) {
+            if (h === "pin.it") return unknownMedia("Pinterest · shared pin", "Resolves to the pin and its media");
+            if (p[0] === "pin" && p[1]) return unknownMedia("Pinterest pin", "Image or video pin");
+            if (p.length >= 2) return nothing("Pinterest board", "A board is a collection. Open one pin and share that link.");
+            if (p.length === 1) return nothing("Pinterest profile", "Open a specific pin and share that link instead.");
+            return nothing("Pinterest", "No downloadable media detected.");
+          } },
+        { name: "Snapchat", match: (h) => h === "snapchat.com",
+          classify(u, h, p) {
+            if (p[0] === "spotlight" || p[0] === "p") return video("Snapchat Spotlight", "Public vertical video", { duration: "0:19", size: 6 });
+            if (p[0] === "t") return unknownMedia("Snapchat · shared link", "Resolves on-device");
+            if (p[0] === "add") return nothing("Snapchat profile link", "This link adds a friend — there's no media behind it.");
+            return nothing("Snapchat", "No downloadable media detected.");
+          } },
+        { name: "LinkedIn", match: (h) => h === "linkedin.com",
+          classify(u, h, p) {
+            if (p[0] === "posts" || p[0] === "feed") return unknownMedia("LinkedIn post", "Video or images, if the post carries them");
+            if (p[0] === "in") return nothing("LinkedIn profile", "Open a specific post and share that link instead.");
+            if (p[0] === "company") return nothing("LinkedIn company page", "Open a specific post and share that link instead.");
+            if (p[0] === "events") return nothing("LinkedIn event", "Live event recordings aren't served as downloadable media.");
+            return nothing("LinkedIn", "No downloadable media detected.");
+          } },
+        { name: "Discord", match: (h) => ["discord.gg", "discord.com", "cdn.discordapp.com", "media.discordapp.net"].includes(h),
+          classify(u, h, p) {
+            if (h === "cdn.discordapp.com" || h === "media.discordapp.net") {
+              const f = (p[p.length - 1] || "").toLowerCase();
+              if (/\.(jpe?g|png|webp|gif)$/.test(f)) return photos("Discord image", "Direct attachment · original quality", 1);
+              if (/\.(mp3|wav|ogg|m4a|flac)$/.test(f)) return audio("Discord audio", "Direct attachment · original quality");
+              return video("Discord attachment", "Direct file · original quality", { size: 18 });
+            }
+            if (h === "discord.gg" || p[0] === "invite") return nothing("Discord invite", "This link joins a server — there's no media behind it.");
+            if (p[0] === "channels") return nothing("Discord channel", "Channel attachments are permission-gated and can't be fetched from a link.");
+            return nothing("Discord", "No downloadable media detected.");
           } },
         { name: "Spotify", match: (h) => h === "open.spotify.com" || h === "spotify.com",
           classify(u, h, p) {
-            if (p[0] === "track") return media("audio", "Spotify track", "Matched + fetched via YouTube", METHOD_SETS.audio());
-            if (p[0] === "episode") return media("audio", "Spotify episode", "Podcast episode", METHOD_SETS.audio());
-            if (["album", "playlist", "show"].includes(p[0])) return unsupported(`Spotify ${p[0]}`, "DRM-protected — paste an individual track or episode link instead");
-            if (p[0] === "artist" || p[0] === "user") return unsupported("Spotify profile", "Paste a link to a specific track instead");
-            return unsupported("Spotify", "No downloadable media detected");
+            if (p[0] === "track") return audio("Spotify track", "Matched and fetched via YouTube · cover art embedded");
+            if (p[0] === "episode") return audio("Spotify episode", "Podcast episode · show art embedded");
+            if (["album", "playlist", "show"].includes(p[0])) return nothing(`Spotify ${p[0]}`, "DRM-protected as a set. Open one track or episode and share that link.");
+            if (p[0] === "artist" || p[0] === "user") return nothing("Spotify profile", "Open a specific track and share that link instead.");
+            return nothing("Spotify", "No downloadable media detected.");
           } },
-        { name: "SoundCloud", match: (h) => h === "soundcloud.com",
+        { name: "SoundCloud", match: (h) => h === "soundcloud.com" || h === "on.soundcloud.com",
           classify(u, h, p) {
-            if (p.length >= 2 && p[1] === "sets") return unsupported("SoundCloud playlist", "Paste a link to an individual track instead");
-            if (p.length >= 2) return media("audio", "SoundCloud track", `${p[0]} · track`, METHOD_SETS.audio());
-            return unsupported("SoundCloud profile", "Paste a link to a specific track instead");
+            if (h === "on.soundcloud.com") return unknownMedia("SoundCloud · shared link", "Resolves to the track");
+            if (p.length >= 2 && p[1] === "sets") return nothing("SoundCloud playlist", "Open an individual track and share that link instead.");
+            if (p.length >= 2) return audio("SoundCloud track", `${p[0]} · artwork embedded`);
+            return nothing("SoundCloud profile", "Open a specific track and share that link instead.");
           } },
         { name: "Twitch", match: (h) => h === "twitch.tv" || h === "clips.twitch.tv" || h === "m.twitch.tv",
           classify(u, h, p) {
-            if (h === "clips.twitch.tv" && p[0]) return media("video", "Twitch clip", "Source quality", METHOD_SETS.videoOnly("source"));
-            if (p[0] === "videos" && p[1]) return media("video", "Twitch VOD", "Full broadcast", METHOD_SETS.videoOnly());
-            if (p.includes("clip")) return media("video", "Twitch clip", "Source quality", METHOD_SETS.videoOnly("source"));
-            if (p.length === 1) return unsupported("Twitch channel", "Live streams aren't supported — paste a clip or VOD link");
-            return unsupported("Twitch", "No downloadable media detected");
+            if (h === "clips.twitch.tv" && p[0]) return video("Twitch clip", "Source quality", { duration: "0:42", size: 15 });
+            if (p[0] === "videos" && p[1]) return video("Twitch VOD", "Full broadcast", { duration: "1:48:00", size: 620, alt: true });
+            if (p.includes("clip")) return video("Twitch clip", "Source quality", { duration: "0:42", size: 15 });
+            if (p.length === 1) return nothing("Twitch channel", "Live streams can't be saved. Share a clip or a VOD link instead.");
+            return nothing("Twitch", "No downloadable media detected.");
           } },
-        { name: "Vimeo", match: (h) => h === "vimeo.com",
+        { name: "Vimeo", match: (h) => h === "vimeo.com" || h === "player.vimeo.com",
           classify(u, h, p) {
-            if (/^\d+$/.test(p[0] || "")) return media("video", "Vimeo video", "Creator upload", METHOD_SETS.videoOnly("HD"));
-            return unsupported("Vimeo page", "Paste a link to a specific video instead");
+            const id = p.find((s) => /^\d+$/.test(s));
+            if (id) return video("Vimeo video", "Creator upload", { duration: "3:20", size: 44, alt: true });
+            return nothing("Vimeo page", "Open a specific video and share that link instead.");
+          } },
+        { name: "Tumblr", match: (h) => h === "tumblr.com" || h.endsWith(".tumblr.com"),
+          classify(u, h, p) {
+            if (p[0] === "post" || p[1] === "post" || /^\d+$/.test(p[0] || "")) return unknownMedia("Tumblr post", "Photo set or video");
+            return nothing("Tumblr", "No downloadable media detected.");
           } },
       ];
 
       function detectPlatform(raw) {
         const u = normalizeUrl(raw);
         if (!u) return null;
-        const h = bareHost(u);
-        const p = segs(u);
+        const h = bareHost(u), p = segs(u);
         const plat = PLATFORMS.find((pl) => pl.match(h));
-        if (plat) return { name: plat.name, ...plat.classify(u, h, p) };
-        // Unknown host: yt-dlp covers 1000+ extractors beyond the advertised
-        // list, so a best-effort generic attempt is honest, not a lie.
-        return { name: "Media", ...media("video", "Media source", "on-device extraction · yt-dlp compatible", METHOD_SETS.video()) };
+        if (plat) return { name: plat.name, url: u.href, ...plat.classify(u, h, p) };
+        // A direct file link is worth recognising on its own — it needs no
+        // extractor at all, just a fetch.
+        const last = (p[p.length - 1] || "").toLowerCase();
+        if (/\.(mp4|mkv|webm|mov)$/.test(last)) return { name: "Direct link", url: u.href, ...video("Video file", `${h} · direct download`, { size: 26 }) };
+        if (/\.(mp3|m4a|wav|flac|ogg)$/.test(last)) return { name: "Direct link", url: u.href, ...audio("Audio file", `${h} · direct download`) };
+        if (/\.(jpe?g|png|webp|gif|avif)$/.test(last)) return { name: "Direct link", url: u.href, ...photos("Image file", `${h} · direct download`, 1) };
+        // Unknown host: the engine covers far more sites than the named list, so
+        // a best-effort attempt is honest rather than a promise.
+        return { name: "Media", url: u.href, ...unknownMedia("Media source", `${h} · will try the on-device extractor`) };
       }
 
-      const dlIcon = '<svg class="dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
-      const mIcon = '<svg class="m-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m10 8 6 4-6 4V8Z"/></svg>';
-      const infoIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>';
-      const GLYPHS = {
+      // ── Icons ──
+      const IC = {
         video: '<path d="m10 8 6 4-6 4V8Z"/><rect x="2" y="3" width="20" height="18" rx="3"/>',
         audio: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
         image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+        auto: '<path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/>',
         locked: '<rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
       };
+      const svgIc = (name, cls) => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[name] || IC.video}</svg>`;
+      const dlIcon = '<svg class="dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
+      const infoIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>';
+      const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m20 6-11 11-5-5"/></svg>';
 
-      let detectTimer = null;
-      const history = [];
+      // ── App state ──
+      const settings = { thumbnails: true, autoEngine: true, autoApp: false };
+      const history = [];   // successful saves only — a failure is not a download
+      let current = null;   // active recognition result
+      let selected = new Set();
 
-      function renderPreview(res, url) {
-        $("platform").textContent = res.name;
-        $("pvTitle").textContent = res.title;
-        $("pvSub").textContent = res.sub;
-        const thumb = $("thumb");
-        thumb.classList.toggle("age", !!res.age);
-        thumb.classList.toggle("nodl", !res.downloadable);
-        thumb.querySelector(".glyph").innerHTML = GLYPHS[res.glyph] || GLYPHS.video;
-        $("methods").innerHTML = res.downloadable && res.methods.length
-          ? res.methods.map(([t, s, primary]) =>
-              `<div class="method ${primary ? "primary" : ""}">${mIcon}<div class="m-main"><div class="m-t">${t}</div><div class="m-s">${s}</div></div>${dlIcon}</div>`
-            ).join("")
-          : `<div class="note-row">${infoIcon}<div>${res.note || res.sub}</div></div>`;
-        if (!history.some((h) => h.url === url)) history.unshift({ url, name: res.name, title: res.title, downloadable: res.downloadable });
+      // ── Render ──
+      function renderResult(res) {
+        current = res;
+        selected = new Set();
+        const kindLabel = { video: "Video", photos: "Photos", audio: "Audio", unknown: "Media", none: "" }[res.kind];
+
+        let html = '<div class="card">';
+        const artKind = res.kind === "audio" ? "audio" : res.kind === "photos" ? "image" : "video";
+        html += `<div class="thumb${res.downloadable ? "" : " locked"}">`;
+        html += `<img src="${artFor(res.url, 0, artKind)}" alt="" />`;
+        html += `<span class="chip">${res.name}</span>`;
+        if (res.duration) html += `<span class="dur">${res.duration}</span>`;
+        if (kindLabel) html += `<span class="kindmark">${svgIc(artKind, "")}${kindLabel}${res.kind === "photos" ? " · " + res.count : ""}</span>`;
+        html += "</div>";
+
+        html += `<div class="meta"><div class="title">${res.title}</div><div class="sub">${res.sub}</div></div>`;
+
+        // Photo picker — only for content that genuinely holds more than one image.
+        if (res.kind === "photos" && res.count > 1) {
+          for (let i = 0; i < res.count; i++) selected.add(i);
+          html += '<div class="picker"><div class="picker-head"><div class="t">Choose images</div><div class="all" id="selAll">Deselect all</div></div><div class="grid" id="grid">';
+          for (let i = 0; i < res.count; i++) {
+            html += `<div class="cell on" data-i="${i}"><img src="${artFor(res.url, i + 1, "image")}" alt="Image ${i + 1}" /><span class="check">${checkIcon}</span><span class="idx">${i + 1}</span></div>`;
+          }
+          html += "</div></div>";
+        } else if (res.kind === "photos") {
+          selected.add(0);
+        }
+
+        html += '<div class="methods">';
+        if (res.downloadable) {
+          res.options.forEach((o) => {
+            html += `<div class="method ${o.primary ? "primary" : ""}" data-opt="${o.id}">${svgIc(o.icon, "m-ic")}<div class="m-main"><div class="m-t">${o.label}</div><div class="m-s">${o.detail}</div></div>${dlIcon}</div>`;
+          });
+        } else {
+          html += `<div class="note-row">${infoIcon}<div>${res.note}</div></div>`;
+        }
+        html += "</div></div>";
+
+        $("result").innerHTML = html;
+        wireResult(res);
       }
 
+      function wireResult(res) {
+        const grid = $("grid");
+        if (grid) {
+          grid.querySelectorAll(".cell").forEach((cell) => {
+            cell.addEventListener("click", () => {
+              const i = +cell.dataset.i;
+              if (selected.has(i)) selected.delete(i); else selected.add(i);
+              cell.classList.toggle("on", selected.has(i));
+              syncPhotoOption();
+            });
+          });
+          // The action follows the label, not a count: while anything is ticked
+          // the button clears the selection, and only once nothing is ticked
+          // does it offer to select everything. Keying this off
+          // "selected.size === count" instead re-selected everything the moment
+          // one image was unticked, which is the opposite of what it said.
+          $("selAll").addEventListener("click", () => {
+            selected = selected.size > 0 ? new Set() : new Set(Array.from({ length: res.count }, (_, i) => i));
+            grid.querySelectorAll(".cell").forEach((c) => c.classList.toggle("on", selected.has(+c.dataset.i)));
+            syncPhotoOption();
+          });
+        }
+        document.querySelectorAll(".method").forEach((m) => {
+          m.addEventListener("click", () => startDownload(res, m.dataset.opt));
+        });
+      }
+
+      // The photo option's own label and detail track the selection, so the
+      // button never says "save 3" when one is ticked — and goes inert at zero.
+      function syncPhotoOption() {
+        const el = document.querySelector('.method[data-opt="photos"]');
+        if (!el) return;
+        const n = selected.size;
+        const all = $("selAll");
+        if (all) all.textContent = n > 0 ? "Deselect all" : "Select all";
+        el.querySelector(".m-t").textContent = n === 0 ? "Nothing selected" : n === 1 ? "Save photo" : `Save ${n} photos`;
+        el.querySelector(".m-s").textContent = n === 0 ? "Tick at least one image above" : `JPG · original quality · ${n} of ${current.count}`;
+        el.style.opacity = n === 0 ? "0.5" : "1";
+        el.style.pointerEvents = n === 0 ? "none" : "auto";
+      }
+
+      // ── Input flow ──
+      const search = $("search"), input = $("input"), paste = $("pasteBtn");
+      input.addEventListener("focus", () => search.classList.add("focused"));
+      input.addEventListener("blur", () => { if (!input.value) search.classList.remove("focused"); });
+      $("clear").addEventListener("click", () => { input.value = ""; input.dispatchEvent(new Event("input")); input.focus(); });
+
+      let detectTimer = null;
       function onType() {
         const v = input.value;
-        const isLink = looksLikeLink(v);
         paste.classList.toggle("hidden", v.length > 0);
         clearTimeout(detectTimer);
-        if (isLink) {
-          // Simulate the on-device detect: a short beat, then the paste text is
-          // "accepted", the bar shrinks + lifts, preview slides in.
+        if (looksLikeLink(v)) {
+          phone.dataset.mode = "reading";
           detectTimer = setTimeout(() => {
-            const res = detectPlatform(v);
-            renderPreview(res, v);
+            renderResult(detectPlatform(v));
             phone.dataset.mode = "preview";
             input.blur();
-          }, 550);
+          }, 520);
         } else if (v.length === 0) {
           phone.dataset.mode = "idle";
         }
       }
       input.addEventListener("input", onType);
-
-      // Paste button → simulate reading the clipboard with a real-ish link.
       paste.addEventListener("click", async () => {
-        let text = "https://vm.tiktok.com/ZN9rED9Wge8tw-2Oe7q/";
+        let text = "https://www.tiktok.com/@dam1anjr/photo/7669412803618327830?pic_cnt=3";
         try { const c = await navigator.clipboard.readText(); if (looksLikeLink(c)) text = c.trim(); } catch (e) {}
         input.value = text; onType();
       });
 
-      // ── Self-test (dev only): exercises the detector against a broad sample
-      // of real-shaped URLs across every advertised platform + edge cases, and
-      // reports pass/fail to the console. Re-run any time from the console via
-      // window.__vortexSelfTest().
-      window.__vortexSelfTest = function () {
-        const cases = [
-          ["https://www.tiktok.com/@zachking/video/6768504823336815877", "TikTok", true],
-          ["https://vm.tiktok.com/ZN9rED9Wge8tw/", "TikTok", true],
-          ["https://vt.tiktok.com/ZS6abcdef/", "TikTok", true],
-          ["tiktok.com/@zachking", "TikTok", false],
-          ["https://www.tiktok.com/@zachking/photo/7123456789", "TikTok", true],
-          ["https://youtu.be/dQw4w9WgXcQ", "YouTube", true],
-          ["https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s", "YouTube", true],
-          ["https://www.youtube.com/shorts/abc123XYZ", "YouTube", true],
-          ["https://music.youtube.com/watch?v=abc123XYZ", "YouTube", true],
-          ["https://www.youtube.com/@mkbhd", "YouTube", false],
-          ["https://www.youtube.com/playlist?list=PL123", "YouTube", false],
-          ["https://www.instagram.com/p/CzX1abc/", "Instagram", true],
-          ["https://www.instagram.com/reel/CzX1abc/", "Instagram", true],
-          ["https://www.instagram.com/stories/nasa/123456789/", "Instagram", true],
-          ["https://www.instagram.com/nasa/", "Instagram", false],
-          ["https://www.facebook.com/watch/?v=1234567890", "Facebook", true],
-          ["https://fb.watch/abc123/", "Facebook", true],
-          ["https://www.facebook.com/reel/1234567890", "Facebook", true],
-          ["https://www.facebook.com/nasa", "Facebook", false],
-          ["https://www.facebook.com/sharer/sharer.php?u=https://example.com", "Facebook", false],
-          ["https://x.com/nasa/status/1234567890123456789", "X", true],
-          ["https://twitter.com/nasa", "X", false],
-          ["https://www.reddit.com/r/space/comments/abc123/title/", "Reddit", true],
-          ["https://www.reddit.com/r/space/", "Reddit", false],
-          ["https://www.reddit.com/user/spez/", "Reddit", false],
-          ["https://www.pinterest.com/pin/1234567890/", "Pinterest", true],
-          ["https://pin.it/abc123", "Pinterest", true],
-          ["https://www.pinterest.com/nasa/space/", "Pinterest", false],
-          ["https://www.linkedin.com/posts/satyanadella_activity-123", "LinkedIn", true],
-          ["https://www.linkedin.com/in/satyanadella/", "LinkedIn", false],
-          ["https://www.linkedin.com/company/microsoft/", "LinkedIn", false],
-          ["https://www.snapchat.com/spotlight/abc123", "Snapchat", true],
-          ["https://www.snapchat.com/add/nasa", "Snapchat", false],
-          ["https://cdn.discordapp.com/attachments/1/2/clip.mp4", "Discord", true],
-          ["https://discord.gg/abc123", "Discord", false],
-          ["https://discord.com/channels/1/2", "Discord", false],
-          ["https://www.threads.net/@nasa/post/CzX1abc", "Threads", true],
-          ["https://www.threads.net/@nasa", "Threads", false],
-          ["https://open.spotify.com/track/6habFhsOp2NvshLv26DqMb", "Spotify", true],
-          ["https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M", "Spotify", false],
-          ["https://soundcloud.com/artist/track-name", "SoundCloud", true],
-          ["https://soundcloud.com/artist", "SoundCloud", false],
-          ["https://soundcloud.com/artist/sets/album-name", "SoundCloud", false],
-          ["https://clips.twitch.tv/AbcDefGhiJkl", "Twitch", true],
-          ["https://www.twitch.tv/videos/1234567890", "Twitch", true],
-          ["https://www.twitch.tv/ninja", "Twitch", false],
-          ["https://vimeo.com/76979871", "Vimeo", true],
-          ["https://vimeo.com/channels/staffpicks", "Vimeo", false],
-          // Real links Apostolos pasted 2026-08-03 — caught the Threads /share/
-          // bug below (was falling through to unsupported).
-          ["https://www.instagram.com/p/DakQe9RDuTZ/?img_index=3&igsh=YmxteHUydjZ5b3Q=", "Instagram", true],
-          ["https://www.instagram.com/reel/DbZD6IjPaKJ/?igsh=Zjk1d2hkZXhkOGZj", "Instagram", true],
-          ["https://www.threads.com/share/BBG3JDs9VG/", "Threads", true],
-          ["https://www.threads.com/share/BAR_xsu_HL/", "Threads", true],
-          ["https://vm.tiktok.com/ZN8dArHYa/", "TikTok", true],
-          ["https://vm.tiktok.com/ZN9hPDSXcQG94-4SMvp/", "TikTok", true],
-          ["https://music.youtube.com/watch?v=Jz_J-gIbM6Q", "YouTube", true],
-          ["https://youtube.com/shorts/Ux8r8kvKcE4", "YouTube", true],
-          ["http://youtube.com/post/Ugkxeqb12_NWLnoaGNjf16cmg43jCXvcdZua", "YouTube", false],
-          ["   https://youtu.be/dQw4w9WgXcQ   ", "YouTube", true],
-          ["HTTPS://X.COM/nasa/status/1234567890123456789", "X", true],
-          ["not a link at all", null, null],
-          ["", null, null],
-          ["https://example.com/some/random/page", "Media", true],
-        ];
-        let pass = 0, fail = 0;
-        console.group("%cVortex link-detection self-test", "font-weight:bold");
-        for (const [url, expectName, expectDl] of cases) {
-          const link = looksLikeLink(url);
-          const res = link ? detectPlatform(url) : null;
-          const gotName = res ? res.name : null;
-          const gotDl = res ? res.downloadable : null;
-          const ok = gotName === expectName && (expectName === null || gotDl === expectDl);
-          ok ? pass++ : fail++;
-          console.log(ok ? "✅" : "❌", JSON.stringify(url), "→", gotName, gotDl, ok ? "" : `(expected ${expectName}, ${expectDl})`);
-        }
-        console.log(`${pass}/${cases.length} passed, ${fail} failed`);
-        console.groupEnd();
-        return { pass, fail, total: cases.length };
-      };
-      window.__vortexSelfTest();
+      // ── Download ──
+      // A modelled transfer, not a real one: the point of the preview is the
+      // shape of the feedback — a ring that fills, a row per file, a settled
+      // success state — which is what has to be judged before it is built.
+      const scrim = $("scrim"), dlSheet = $("dlSheet"), setSheet = $("setSheet");
+      let dlTimer = null, dlDone = false;
 
-      // ── Gear / theme sheet ──
-      const scrim = $("scrim"), sheet = $("sheet");
-      const openSheet = () => { scrim.classList.add("open"); sheet.classList.add("open"); };
-      const closeSheet = () => { scrim.classList.remove("open"); sheet.classList.remove("open"); };
-      $("gearBtn").addEventListener("click", openSheet);
-      scrim.addEventListener("click", closeSheet);
-      function setActiveTheme(t) {
+      function openSheet(el) { scrim.classList.add("open"); el.classList.add("open"); }
+      function closeSheets() {
+        scrim.classList.remove("open");
+        dlSheet.classList.remove("open");
+        setSheet.classList.remove("open");
+        clearInterval(dlTimer);
+      }
+      scrim.addEventListener("click", () => { if (dlSheet.classList.contains("open") && !dlDone) return; closeSheets(); });
+
+      function startDownload(res, optId) {
+        const opt = res.options.find((o) => o.id === optId);
+        if (!opt) return;
+        dlDone = false;
+
+        // What is actually being fetched, as named files.
+        let files;
+        if (optId === "photos") {
+          files = [...selected].sort((a, b) => a - b).map((i) => ({ name: `image_${i + 1}.jpg`, size: (1.4 + (i % 3) * 0.6).toFixed(1) + " MB", art: artFor(res.url, i + 1, "image") }));
+        } else if (optId === "audio") {
+          files = [{ name: "audio.mp3", size: "7.2 MB", art: artFor(res.url, 0, "audio") }];
+        } else if (optId === "cover") {
+          files = [{ name: "cover.jpg", size: "0.4 MB", art: artFor(res.url, 0, "image") }];
+        } else {
+          files = [{ name: "video.mp4", size: (opt.detail.match(/~(\d+) MB/) || [, "24"])[1] + " MB", art: artFor(res.url, 0, "video") }];
+        }
+        // The thumbnail setting is a real behaviour, not decoration: with it on,
+        // an audio file carries the source artwork rather than landing blank.
+        const withArt = settings.thumbnails;
+
+        $("dlThumb").src = files[0].art;
+        $("dlTitle").textContent = res.title;
+        $("dlSub").textContent = opt.label + (withArt && (optId === "audio") ? " · thumbnail embedded" : "");
+        $("dlItems").innerHTML = files.map((f, i) =>
+          `<div class="dl-item" data-i="${i}">
+             <svg class="st-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/></svg>
+             <span class="nm">${f.name}</span><span class="mini"><i></i></span><span class="sz">${f.size}</span>
+           </div>`).join("");
+        $("dlAction").textContent = "Cancel";
+        $("dlAction").classList.remove("accent");
+        $("ringWrap").classList.remove("done");
+        $("ringLabel").innerHTML = '<div class="pct" id="dlPct">0%</div><div class="st" id="dlState">Starting…</div>';
+        setRing(0);
+        openSheet(dlSheet);
+
+        const rows = [...$("dlItems").querySelectorAll(".dl-item")];
+        let pct = 0, per = 100 / files.length;
+        clearInterval(dlTimer);
+        dlTimer = setInterval(() => {
+          pct = Math.min(100, pct + (2 + Math.random() * 5));
+          setRing(pct);
+          $("dlPct").textContent = Math.round(pct) + "%";
+          $("dlState").textContent = pct < 12 ? "Reading the source…" : pct < 96 ? "Downloading" : "Finishing…";
+          rows.forEach((row, i) => {
+            // Rounded because the exact division is not exact: with three files
+            // the last one computes to 99.99999999999999, so a bare `>= 100`
+            // left it forever unticked under a finished progress ring.
+            const local = Math.round(Math.max(0, Math.min(100, (pct - i * per) / per * 100)) * 100) / 100;
+            row.querySelector(".mini i").style.width = local + "%";
+            row.classList.toggle("active", local > 0 && local < 100);
+            if (local >= 100) markRowDone(row);
+          });
+          if (pct >= 100) finishDownload(res, opt, files);
+        }, 130);
+      }
+
+      function setRing(pct) {
+        const C = 2 * Math.PI * 52;
+        $("ringFill").style.strokeDashoffset = C * (1 - pct / 100);
+      }
+
+      function markRowDone(row) {
+        if (row.classList.contains("done")) return;
+        row.classList.remove("active");
+        row.classList.add("done");
+        row.querySelector(".mini i").style.width = "100%";
+        row.querySelector(".st-ic").innerHTML = '<path d="m20 6-11 11-5-5"/>';
+      }
+
+      function finishDownload(res, opt, files) {
+        clearInterval(dlTimer);
+        dlDone = true;
+        // A finished download means every file finished, by definition — assert
+        // that here rather than relying on each row's own arithmetic landing.
+        $("dlItems").querySelectorAll(".dl-item").forEach(markRowDone);
+        $("ringWrap").classList.add("done");
+        $("ringLabel").innerHTML = `<svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg>`;
+        $("dlAction").textContent = "Done";
+        $("dlAction").classList.add("accent");
+        // Only a completed save becomes history. Failures are not downloads and
+        // do not belong in a list of things you have.
+        history.unshift({
+          url: res.url, name: res.name, title: res.title,
+          what: files.length === 1 ? files[0].name : `${files.length} images`,
+          art: files[0].art, at: "just now",
+        });
+        showToast(files.length === 1 ? "Saved to your gallery" : `${files.length} images saved`);
+      }
+      $("dlAction").addEventListener("click", closeSheets);
+
+      let toastTimer = null;
+      function showToast(text) {
+        $("toastText").textContent = text;
+        $("toast").classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => $("toast").classList.remove("show"), 2600);
+      }
+
+      // ── History ──
+      const hScreen = $("history");
+      function renderHistory() {
+        $("hList").innerHTML = history.length
+          ? history.map((h, i) =>
+              `<div class="h-item" style="animation-delay:${i * 45}ms">
+                 <div class="h-thumb"><img src="${h.art}" alt="" /></div>
+                 <div class="h-main"><div class="h-t">${h.title}</div><div class="h-s">${h.what} · ${h.at}</div></div>
+                 <div class="h-plat">${h.name}</div>
+               </div>`).join("")
+          : '<div class="empty">Nothing saved yet.<br>Downloads appear here once they finish.</div>';
+      }
+      $("historyBtn").addEventListener("click", () => { renderHistory(); hScreen.classList.add("open"); });
+      $("backBtn").addEventListener("click", () => hScreen.classList.remove("open"));
+      $("clearHistBtn").addEventListener("click", () => {
+        if (!history.length) return;
+        history.length = 0;
+        renderHistory();
+        showToast("History deleted");
+      });
+
+      // ── Settings ──
+      $("gearBtn").addEventListener("click", () => openSheet(setSheet));
+      function setTheme(t) {
         phone.dataset.theme = t;
         document.querySelectorAll(".theme-opt").forEach((o) => o.classList.toggle("active", o.dataset.t === t));
       }
       document.querySelectorAll(".theme-opt").forEach((o) =>
-        o.addEventListener("click", () => { setActiveTheme(o.dataset.t); setTimeout(closeSheet, 220); }));
-      setActiveTheme("dark");
+        o.addEventListener("click", () => setTheme(o.dataset.t)));
+      setTheme("dark");
 
-      // ── History screen ──
-      const hScreen = $("history");
-      $("historyBtn").addEventListener("click", () => {
-        const list = $("hList");
-        list.innerHTML = history.length
-          ? history.map((h) => `<div class="h-item"><div class="h-thumb">${mIcon.replace("m-ic", "").replace('class=""', '')}</div><div class="h-main"><div class="h-t">${h.title}</div><div class="h-s" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.url}</div></div><div class="h-plat">${h.name}</div></div>`).join("")
-          : `<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:60px 20px">No downloads yet.<br>Paste a link on the home screen.</div>`;
-        hScreen.classList.add("open");
+      function wireToggle(id, key, after) {
+        const el = $(id);
+        el.addEventListener("click", () => {
+          settings[key] = !settings[key];
+          el.classList.toggle("on", settings[key]);
+          if (after) after(settings[key]);
+        });
+      }
+      wireToggle("tgThumb", "thumbnails");
+      wireToggle("tgEngine", "autoEngine", (on) => {
+        $("verState").textContent = on ? "Recognition engine up to date" : "Auto-update off — check manually";
+        $("verAct").classList.toggle("idle", on);
       });
-      $("backBtn").addEventListener("click", () => hScreen.classList.remove("open"));
+      // The update prompt is the point here: it appears ONLY when a newer
+      // version genuinely exists. Checking and finding nothing says so, and
+      // leaves no badge behind.
+      wireToggle("tgApp", "autoApp", (on) => { if (on) checkAppUpdate(); });
+
+      const INSTALLED = "4.0.0";
+      let latestSeen = "4.0.0";
+      function newer(a, b) {
+        const pa = a.split(".").map(Number), pb = b.split(".").map(Number);
+        for (let i = 0; i < 3; i++) { if ((pa[i] || 0) > (pb[i] || 0)) return true; if ((pa[i] || 0) < (pb[i] || 0)) return false; }
+        return false;
+      }
+      function checkAppUpdate() {
+        $("verState").textContent = "Checking…";
+        setTimeout(() => {
+          if (newer(latestSeen, INSTALLED)) {
+            $("verState").textContent = `Version ${latestSeen} is available`;
+            $("verAct").textContent = "Update";
+            $("verAct").classList.remove("idle");
+            $("gearBtn").classList.add("has-update");
+          } else {
+            $("verState").textContent = "You're on the latest version";
+            $("verAct").textContent = "Check";
+            $("gearBtn").classList.remove("has-update");
+          }
+        }, 700);
+      }
+      $("verAct").addEventListener("click", checkAppUpdate);
+      $("appVer").textContent = INSTALLED;
+
+      // ── Self-test ──
+      // Exercises recognition against real-shaped URLs — including every link
+      // pasted during review — asserting platform, content kind, and whether it
+      // is downloadable. Re-run any time: window.__vortexSelfTest().
+      window.__vortexSelfTest = function () {
+        const T = [
+          // [url, platform, kind, downloadable, expectedPhotoCount?]
+          ["https://www.tiktok.com/@zachking/video/6768504823336815877", "TikTok", "video", true],
+          ["https://vm.tiktok.com/ZN8dArHYa/", "TikTok", "unknown", true],
+          ["https://vm.tiktok.com/ZN8dS3RSQ/", "TikTok", "unknown", true],
+          ["https://vm.tiktok.com/ZN9hPDSXcQG94-4SMvp/", "TikTok", "unknown", true],
+          ["https://vm.tiktok.com/ZN8dSKf1b/", "TikTok", "unknown", true],
+          ["https://vm.tiktok.com/ZN9hPDPRrc4XT-tHYiN/", "TikTok", "unknown", true],
+          ["https://vt.tiktok.com/ZS6abcdef/", "TikTok", "unknown", true],
+          ["tiktok.com/@zachking", "TikTok", "none", false],
+          ["https://www.tiktok.com/@dam1anjr/photo/7669412803618327830?_r=1&pic_cnt=3&ug_photo_idx=2&utm_source=copy", "TikTok", "photos", true, 3],
+          ["https://www.tiktok.com/@x/photo/123", "TikTok", "photos", true, 1],
+          ["https://youtu.be/_kUolvbeAjY", "YouTube", "video", true],
+          ["https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s", "YouTube", "video", true],
+          ["https://youtube.com/shorts/Ux8r8kvKcE4", "YouTube", "video", true],
+          ["https://music.youtube.com/watch?v=Jz_J-gIbM6Q", "YouTube", "audio", true],
+          ["http://youtube.com/post/Ugkxeqb12_NWLnoaGNjf16cmg43jCXvcdZua", "YouTube", "none", false],
+          ["https://www.youtube.com/@mkbhd", "YouTube", "none", false],
+          ["https://www.youtube.com/playlist?list=PL123", "YouTube", "none", false],
+          ["https://www.instagram.com/p/DakQe9RDuTZ/?img_index=3&igsh=YmxteHUydjZ5b3Q=", "Instagram", "photos", true, 3],
+          ["https://www.instagram.com/p/CzX1abc/", "Instagram", "unknown", true],
+          ["https://www.instagram.com/reel/DbZD6IjPaKJ/?igsh=Zjk1d2hkZXhkOGZj", "Instagram", "video", true],
+          ["https://www.instagram.com/reel/DayO5cTRpH5/?igsh=emF1OHZwOTlpdjYx", "Instagram", "video", true],
+          ["https://www.instagram.com/stories/nasa/123456789/", "Instagram", "unknown", true],
+          ["https://www.instagram.com/nasa/", "Instagram", "none", false],
+          ["https://www.threads.com/share/BBG3JDs9VG/", "Threads", "unknown", true],
+          ["https://www.threads.com/share/BAR_xsu_HL/", "Threads", "unknown", true],
+          ["https://www.threads.com/share/BAUyXcZ8KP/", "Threads", "unknown", true],
+          ["https://www.threads.net/@nasa/post/CzX1abc", "Threads", "unknown", true],
+          ["https://www.threads.net/@nasa", "Threads", "none", false],
+          ["https://www.facebook.com/watch/?v=1234567890", "Facebook", "video", true],
+          ["https://fb.watch/abc123/", "Facebook", "video", true],
+          ["https://www.facebook.com/reel/1234567890", "Facebook", "video", true],
+          ["https://www.facebook.com/sharer/sharer.php?u=https://example.com", "Facebook", "none", false],
+          ["https://www.facebook.com/nasa", "Facebook", "none", false],
+          ["https://x.com/nasa/status/1234567890123456789", "X", "unknown", true],
+          ["https://twitter.com/nasa", "X", "none", false],
+          ["https://www.reddit.com/r/space/comments/abc123/title/", "Reddit", "video", true],
+          ["https://www.reddit.com/r/space/", "Reddit", "none", false],
+          ["https://www.pinterest.com/pin/1234567890/", "Pinterest", "unknown", true],
+          ["https://pin.it/abc123", "Pinterest", "unknown", true],
+          ["https://www.pinterest.com/nasa/space/", "Pinterest", "none", false],
+          ["https://www.linkedin.com/posts/satyanadella_activity-123", "LinkedIn", "unknown", true],
+          ["https://www.linkedin.com/in/satyanadella/", "LinkedIn", "none", false],
+          ["https://www.snapchat.com/spotlight/abc123", "Snapchat", "video", true],
+          ["https://www.snapchat.com/add/nasa", "Snapchat", "none", false],
+          ["https://cdn.discordapp.com/attachments/1/2/clip.mp4", "Discord", "video", true],
+          ["https://cdn.discordapp.com/attachments/1/2/pic.png", "Discord", "photos", true, 1],
+          ["https://discord.gg/abc123", "Discord", "none", false],
+          ["https://open.spotify.com/track/6habFhsOp2NvshLv26DqMb", "Spotify", "audio", true],
+          ["https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M", "Spotify", "none", false],
+          ["https://soundcloud.com/artist/track-name", "SoundCloud", "audio", true],
+          ["https://soundcloud.com/artist/sets/album-name", "SoundCloud", "none", false],
+          ["https://soundcloud.com/artist", "SoundCloud", "none", false],
+          ["https://clips.twitch.tv/AbcDefGhiJkl", "Twitch", "video", true],
+          ["https://www.twitch.tv/videos/1234567890", "Twitch", "video", true],
+          ["https://www.twitch.tv/ninja", "Twitch", "none", false],
+          ["https://vimeo.com/76979871", "Vimeo", "video", true],
+          ["https://vimeo.com/channels/staffpicks", "Vimeo", "none", false],
+          ["https://example.com/clip.mp4", "Direct link", "video", true],
+          ["https://example.com/song.mp3", "Direct link", "audio", true],
+          ["https://example.com/photo.jpg", "Direct link", "photos", true, 1],
+          ["   https://youtu.be/dQw4w9WgXcQ   ", "YouTube", "video", true],
+          ["HTTPS://X.COM/nasa/status/1234567890123456789", "X", "unknown", true],
+          ["https://example.com/some/random/page", "Media", "unknown", true],
+        ];
+        let pass = 0, fail = 0;
+        const failures = [];
+        console.group("%cVortex recognition self-test", "font-weight:bold");
+        for (const [url, wantName, wantKind, wantDl, wantCount] of T) {
+          const res = detectPlatform(url);
+          const ok = res && res.name === wantName && res.kind === wantKind && res.downloadable === wantDl &&
+            (wantCount === undefined || res.count === wantCount);
+          if (ok) { pass++; } else {
+            fail++;
+            failures.push({ url, got: res && `${res.name}/${res.kind}/${res.downloadable}${res.count ? "/" + res.count : ""}`, want: `${wantName}/${wantKind}/${wantDl}${wantCount ? "/" + wantCount : ""}` });
+          }
+        }
+        // Non-links must be rejected outright, not classified.
+        for (const bad of ["not a link at all", "", "   ", "hello world"]) {
+          if (looksLikeLink(bad)) { fail++; failures.push({ url: bad, got: "accepted", want: "rejected" }); } else pass++;
+        }
+        console.log(`${pass} passed, ${fail} failed`);
+        failures.forEach((f) => console.log("FAIL", JSON.stringify(f.url), "got", f.got, "want", f.want));
+        console.groupEnd();
+        return { pass, fail, total: pass + fail, failures };
+      };
+      window.__vortexSelfTest();
     </script>
   </body>
 </html>
