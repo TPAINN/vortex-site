@@ -63,8 +63,8 @@ function Hero({ active }) {
     className="font-display text-[clamp(2.4rem,8.5vw,5.8rem)] font-extrabold leading-[1.03] tracking-[-0.04em] text-ink"
     style={{ fontVariationSettings: '"opsz" 96' }}
   >
-          Paste a link.{" "}
-          <span className="gradient-vortex-text">Keep the video.</span>
+          Paste the link.{" "}
+          <span className="gradient-vortex-text">Keep the source.</span>
         </motion.h1>
 
         <motion.p
