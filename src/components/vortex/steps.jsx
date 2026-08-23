@@ -10,7 +10,7 @@ const STEPS = [
   {
     icon: SlidersHorizontal,
     title: "Pick your format",
-    body: "Video as MP4 up to 1080p, or audio only as MP3 320 kbps / M4A \u2014 with cover art and track metadata baked in automatically.",
+    body: "Video, Images and Audio as MP4 up to 1080p, or audio only as MP3 320 kbps / M4A \u2014 with cover art and track metadata baked in automatically.",
     code: "MP4 \xB7 MP3 \xB7 M4A"
   },
   {

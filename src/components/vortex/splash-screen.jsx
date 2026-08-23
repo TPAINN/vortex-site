@@ -125,9 +125,9 @@ function SplashScreen({ progress }) {
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: 0.25, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
   >
-          Paste a link.
+          Paste the link.
           <br />
-          <span className="gradient-vortex-text">Keep the video.</span>
+          <span className="gradient-vortex-text">Keep the source.</span>
         </motion.h1>
 
         <motion.p
@@ -136,7 +136,7 @@ function SplashScreen({ progress }) {
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: 0.45, duration: 0.8 }}
   >
-          A free Android app that pulls video &amp; audio from 10+ platforms —
+          A free Android app that pulls images, videos &amp; audio from 10+ platforms —
           straight into your Downloads folder. No ads, no accounts, no watermarks.
         </motion.p>
 
@@ -183,7 +183,7 @@ function SplashScreen({ progress }) {
     animate={{ opacity: 1 }}
     transition={{ delay: 1.1, duration: 0.6 }}
   >
-        youtube · tiktok · instagram · x · reddit · spotify
+        youtube · tiktok · instagram · x · reddit · spotify · soundcloud · threads · and more
       </motion.div>
     </motion.div>;
 }
