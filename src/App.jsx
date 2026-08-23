@@ -7,7 +7,6 @@ import SplashScreen from "@/components/vortex/splash-screen";
 import SmoothScroll from "@/components/vortex/smooth-scroll";
 import ScrollProgress from "@/components/vortex/scroll-progress";
 import SectionDots from "@/components/vortex/section-dots";
-import CustomCursor from "@/components/vortex/custom-cursor";
 import Nav from "@/components/vortex/nav";
 import Hero from "@/components/vortex/hero";
 import Steps from "@/components/vortex/steps";
@@ -151,7 +150,6 @@ export default function App() {
       <SmoothScroll enabled={phase === "site"} />
       <ScrollProgress active={phase === "site"} />
       <SectionDots active={phase === "site"} />
-      <CustomCursor />
       <Nav active={siteActive} />
 
       {/* The document that "rises" during the reveal — transform + opacity only,
