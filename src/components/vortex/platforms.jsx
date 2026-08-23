@@ -47,13 +47,13 @@ function Platforms() {
 
         <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {PLATFORMS.map((p, i) => <Reveal key={p.name} delay={i % 4 * 0.06} y={20}>
-              <div className="group relative flex h-full items-center gap-3.5 overflow-hidden rounded-2xl border border-glass bg-glass p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-violet/40 hover:bg-white/[0.07]">
+              <div className="group relative flex h-full items-center gap-3.5 overflow-hidden rounded-2xl border border-glass bg-glass p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/15">
                 {
-    /* hover glow */
+    /* subtle platform-tinted wash across the whole card, not just a hover accent */
   }
                 <div
-    className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-60"
-    style={{ background: `radial-gradient(circle, ${p.color}55, transparent 70%)` }}
+    className="pointer-events-none absolute inset-0 opacity-80 transition-opacity duration-300 group-hover:opacity-100"
+    style={{ background: `linear-gradient(135deg, ${p.color}14, transparent 70%)` }}
   />
                 <div
     className="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-glass bg-black/30 transition-transform duration-300 group-hover:scale-110"
@@ -69,13 +69,6 @@ function Platforms() {
                     {p.note}
                   </div>
                 </div>
-                {
-    /* bottom accent line on hover */
-  }
-                <span
-    className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
-    style={{ background: `linear-gradient(90deg, ${p.color}, transparent)` }}
-  />
               </div>
             </Reveal>)}
 
